@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Muscle Meter Live Reader</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            text-align: center;
+            padding: 30px 16px;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .force-display {
+            font-size: 56px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 16px 0 4px;
+        }
+        .unit {
+            font-size: 24px;
+            color: #7f8c8d;
+        }
+        .peak-display {
+            font-size: 22px;
+            color: #c0392b;
+            margin-bottom: 16px;
+        }
+        .peak-display b {
+            font-size: 30px;
+        }
+        .row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .row button {
+            flex: 1;
+            margin: 0;
+            padding: 10px 12px;
+        }
+        .btn-tare {
+            background-color: #6c757d;
+        }
+        .btn-tare:hover {
+            background-color: #545b62;
+        }
+        .btn-reset {
+            background-color: #c0392b;
+        }
+        .btn-reset:hover {
+            background-color: #962d22;
+        }
+        .newton {
+            font-size: 20px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        .peak-newton {
+            font-size: 16px;
+            color: #c0392b;
+            opacity: 0.8;
+        }
+        #chart {
+            width: 100%;
+            height: 220px;
+            display: block;
+            background: #fbfcfc;
+            border: 1px solid #e5e8e8;
+            border-radius: 8px;
+        }
+        .status {
+            font-size: 14px;
+            color: #e67e22;
+            margin-top: 15px;
+            word-break: break-all;
+        }
+        .mode-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+            background-color: #6c757d;
+            border-radius: 20px;
+            margin-top: 10px;
+            letter-spacing: 1px;
+            transition: background-color 0.2s;
+        }
+        .raw-data {
+            font-size: 11px;
+            color: #95a5a6;
+            margin-top: 10px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .detector {
+            font-size: 14px;
+            margin: 10px 0 0;
+            color: #7f8c8d;
+        }
+        .detector.ready { color: #28a745; }
+        .detector.active { color: #c0392b; font-weight: bold; }
+        .results {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .results h3 {
+            font-size: 16px;
+            margin: 0 0 10px;
+            color: #2c3e50;
+        }
+        .tiles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+        }
+        .tile {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+        .tile .label {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        .tile .value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-variant-numeric: tabular-nums;
+        }
+        .tile .value small {
+            font-size: 12px;
+            font-weight: normal;
+            color: #7f8c8d;
+        }
+        .fs-note {
+            font-size: 12px;
+            color: #e67e22;
+            margin-top: 8px;
+        }
+        .table-wrap {
+            overflow-x: auto;
+            margin-top: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            font-variant-numeric: tabular-nums;
+        }
+        th, td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #ecf0f1;
+            text-align: right;
+            white-space: nowrap;
+        }
+        th {
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+        th:first-child, td:first-child { text-align: left; }
+        .results .row { margin-top: 12px; }
+        .group-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #34495e;
+            margin: 14px 0 6px;
+        }
+        .group-title .hint {
+            font-weight: normal;
+            color: #95a5a6;
+            font-size: 12px;
+        }
+        .guide {
+            margin-top: 24px;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .guide h3 {
+            font-size: 16px;
+            margin: 0 0 8px;
+            color: #2c3e50;
+        }
+        .guide details {
+            border: 1px solid #e5e8e8;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+        }
+        .guide summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .guide p, .guide ol, .guide dl, .guide ul { margin: 8px 0 4px; }
+        .guide ol, .guide ul { padding-left: 20px; }
+        .guide dt { font-weight: 600; margin-top: 8px; color: #2c3e50; }
+        .guide dd { margin: 2px 0 0 0; color: #555; }
+        .guide .refs { font-size: 12px; color: #555; }
+        .guide a { color: #007bff; }
+        .btn-light {
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ced4da;
+        }
+        .btn-light:hover { background-color: #e2e6ea; }
+        @media (max-width: 480px) {
+            .card { padding: 20px 16px; }
+            .force-display { font-size: 44px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Muscle Meter Live</h2>
+        <button id="connectBtn">Connect Bluetooth</button>
+
+        <div>
+            <span id="modeBadge" class="mode-badge">STANDBY</span>
+        </div>
+
+        <div class="force-display">
+            <span id="forceValue">0.0</span> <span id="unitLabel" class="unit">kg</span>
+        </div>
+        <div class="newton">= <span id="forceN">0.0</span> N</div>
+        <div class="peak-display">
+            Peak: <b id="peakValue">0.0</b> <span id="peakUnit">kg</span>
+            <span class="peak-newton">(<span id="peakN">0.0</span> N)</span>
+        </div>
+
+        <div class="row">
+            <button id="tareBtn" class="btn-tare">Tare (ตั้งศูนย์)</button>
+            <button id="resetPeakBtn" class="btn-reset">Reset Peak</button>
+        </div>
+
+        <canvas id="chart"></canvas>
+        <div id="detector" class="detector">การวัด RFD: รอข้อมูล</div>
+
+        <div class="results">
+            <h3>ผลการทดสอบล่าสุด</h3>
+
+            <div class="group-title">แรงสูงสุดและเวลา</div>
+            <div class="tiles">
+                <div class="tile" title="แรงสูงสุดลบแรงพัก (baseline)"><div class="label">Peak Force</div><div class="value" id="rPeak">–</div></div>
+                <div class="tile" title="เวลาจาก onset ถึง 80% ของแรงสูงสุด เชื่อถือได้มากกว่า TTP"><div class="label">Time to 80% Peak</div><div class="value" id="rT80">–</div></div>
+                <div class="tile" title="เวลาจาก onset ถึงแรงสูงสุด แปรผันสูง ใช้ประกอบเท่านั้น"><div class="label">Time to Peak (TTP)</div><div class="value" id="rTtp">–</div></div>
+            </div>
+
+            <div class="group-title">RFD ช่วงต้น (0–150 ms) <span class="hint">สะท้อนระบบประสาทสั่งการ</span></div>
+            <div class="tiles">
+                <div class="tile"><div class="label">RFD 0–50 ms</div><div class="value" id="rRfd50">–</div></div>
+                <div class="tile"><div class="label">RFD 0–100 ms</div><div class="value" id="rRfd100">–</div></div>
+                <div class="tile"><div class="label">RFD 0–150 ms</div><div class="value" id="rRfd150">–</div></div>
+            </div>
+
+            <div class="group-title">RFD ช่วงปลาย (&gt;150 ms) และภาพรวม <span class="hint">ประสาท + ความแข็งแรงสูงสุด</span></div>
+            <div class="tiles">
+                <div class="tile"><div class="label">RFD 0–200 ms</div><div class="value" id="rRfd200">–</div></div>
+                <div class="tile"><div class="label">Peak RFD</div><div class="value" id="rPeakRfd">–</div></div>
+                <div class="tile"><div class="label">RFD 20–80%</div><div class="value" id="rRfd2080">–</div></div>
+            </div>
+
+            <div class="group-title">แรง ณ เวลาที่กำหนด <span class="hint">แรงสุทธิหลัง onset</span></div>
+            <div class="tiles">
+                <div class="tile"><div class="label">Force @ 50 ms</div><div class="value" id="rF50">–</div></div>
+                <div class="tile"><div class="label">Force @ 100 ms</div><div class="value" id="rF100">–</div></div>
+                <div class="tile"><div class="label">Force @ 150 ms</div><div class="value" id="rF150">–</div></div>
+            </div>
+
+            <div class="group-title">Impulse <span class="hint">พื้นที่ใต้กราฟแรงสุทธิ (แรง × เวลา)</span></div>
+            <div class="tiles">
+                <div class="tile"><div class="label">Impulse 0–100 ms</div><div class="value" id="rImp100">–</div></div>
+                <div class="tile"><div class="label">Impulse 0–200 ms</div><div class="value" id="rImp200">–</div></div>
+            </div>
+            <div id="fsNote" class="fs-note"></div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>#</th><th>Peak N</th><th>T80 ms</th><th>TTP ms</th><th>RFD50</th><th>RFD100</th><th>RFD150</th><th>RFD200</th><th>Peak RFD</th><th>20–80%</th></tr>
+                    </thead>
+                    <tbody id="trialRows"></tbody>
+                </table>
+            </div>
+            <div class="row">
+                <button id="exportBtn" class="btn-light">Export CSV</button>
+                <button id="clearTrialsBtn" class="btn-light">ล้างผลทั้งหมด</button>
+            </div>
+        </div>
+
+        <div class="guide">
+            <h3>คู่มือและนิยาม</h3>
+
+            <details open>
+                <summary>วิธีทดสอบให้ได้ค่า RFD ที่เชื่อถือได้</summary>
+                <ol>
+                    <li><b>Pretension 2–3 วินาที:</b> ออกแรงเบา ๆ ค้างไว้ให้สายหรืออุปกรณ์ตึงก่อนเริ่ม เพื่อไม่ให้ช่วงที่อุปกรณ์หย่อนถูกนับเป็นการออกแรง ระบบใช้แรงช่วงนี้เป็น baseline และวัดจากจุดที่แรงเพิ่มขึ้นจากระดับนี้</li>
+                    <li><b>รอข้อความ "พร้อม ออกแรงได้เลย"</b> แล้วออกแรงให้<b>เร็วและแรงที่สุด</b> ค้างไว้ 3–5 วินาที จากนั้นคลายแรง</li>
+                    <li><b>ทำให้เหมือนกันทุกครั้ง:</b> ใช้คำสั่งเดิม มุมข้อต่อเดิม ท่าเดิม และสภาพร่างกายเดียวกัน (ไม่ล้า หรือล้าเท่ากัน) เพราะค่า RFD ไวต่อวิธีทดสอบมาก</li>
+                    <li><b>ทำ 3 ครั้งขึ้นไป</b> พักระหว่างครั้ง แล้วดูค่าที่ดีที่สุดหรือค่าเฉลี่ย</li>
+                </ol>
+            </details>
+
+            <details>
+                <summary>RFD (Rate of Force Development) คืออะไร</summary>
+                <p>อัตราการเพิ่มของแรงต่อเวลา (N/s) บอกว่า<b>สร้างแรงได้เร็วแค่ไหน</b> ต่างจาก Peak Force ที่บอกว่า<b>แรงได้มากแค่ไหน</b> สองคนอาจมีแรงสูงสุดเท่ากัน แต่คนที่ไปถึงแรงนั้นเร็วกว่ามี RFD ดีกว่า ซึ่งสำคัญกับงานที่ต้องออกแรงเร็ว เช่น ทรงตัวเมื่อเกือบล้ม ลงบันได กระโดด หรือวิ่ง</p>
+                <p>การฟื้นฟูที่แรงสูงสุดกลับมาแล้ว แต่ RFD ยังไม่กลับมา ถือว่ายังฟื้นตัวไม่สมบูรณ์ ผู้ป่วยหลังผ่าตัดเอ็นไขว้หน้า (ACL) ที่ผ่านเกณฑ์ความแข็งแรงแล้วมักยังมี RFD ต่ำหรือซ้ายขวาไม่เท่ากัน</p>
+            </details>
+
+            <details>
+                <summary>RFD ช่วงต้น vs ช่วงปลาย</summary>
+                <p><b>ช่วงต้น (0–150 ms):</b> สะท้อนการสั่งงานของระบบประสาทเป็นหลัก คือสั่งกล้ามเนื้อได้เร็วและเรียกใช้หน่วยกล้ามเนื้อได้ไวแค่ไหน ไวต่อความบกพร่องหลังบาดเจ็บ</p>
+                <p><b>ช่วงปลาย (&gt;150 ms):</b> ขึ้นกับทั้งระบบประสาทและความแข็งแรงสูงสุดของกล้ามเนื้อ ยิ่งช่วงเวลายาว ยิ่งสัมพันธ์กับ Peak Force มากขึ้น</p>
+                <p>การดูทั้งสองช่วงช่วยแยกได้ว่าปัญหาอยู่ที่การสั่งงานของระบบประสาท หรือที่ตัวกล้ามเนื้อ</p>
+            </details>
+
+            <details>
+                <summary>นิยามค่าที่คำนวณทั้งหมด</summary>
+                <dl>
+                    <dt>การกรองสัญญาณ (Low-pass filter)</dt>
+                    <dd>ก่อนคำนวณทุกค่าด้านล่าง ข้อมูลจะถูกกรองด้วย Butterworth low-pass 50 Hz แบบ zero-lag (กรองไปและกลับ) เพื่อตัดสัญญาณรบกวนความถี่สูงโดยเส้นแรงไม่เลื่อนเวลา การเคลื่อนไหวของกล้ามเนื้อจริงอยู่ต่ำกว่า 50 Hz จึงไม่สูญเสียข้อมูล ส่วนกราฟ ตัวเลขสด และ Peak บนหน้าจอยังแสดงข้อมูลดิบ</dd>
+                    <dt>Onset (จุดเริ่มออกแรง)</dt>
+                    <dd>จุดสุดท้ายก่อนแรงเกิน baseline + max(3 × SD ของแรงพัก, 2 N) แสดงเป็นเส้นประสีเขียวบนกราฟ ทุกค่าด้านล่างนับเวลาจากจุดนี้</dd>
+                    <dt>Peak Force (N)</dt>
+                    <dd>แรงสูงสุดลบด้วยแรงพัก (baseline) แสดงเป็นจุดแดงบนกราฟ</dd>
+                    <dt>Time to 80% Peak (ms)</dt>
+                    <dd>เวลาจาก onset จนแรงถึง 80% ของแรงสูงสุด เชื่อถือได้มากกว่า TTP สำหรับดูความเร็วในการสร้างแรง แต่อาจไม่สะท้อนความสามารถช่วงท้ายทั้งหมด</dd>
+                    <dt>Time to Peak, TTP (ms)</dt>
+                    <dd>เวลาจาก onset ถึงแรงสูงสุด เข้าใจง่าย แต่<b>แปรผันสูง</b> และขึ้นกับวิธีออกแรง จึงไม่ควรใช้ตัดสินใจเพียงค่าเดียว</dd>
+                    <dt>RFD 0–X ms (N/s)</dt>
+                    <dd>(แรง ณ X ms − แรง ณ onset) ÷ X เป็นวิธีที่มีความน่าเชื่อถือสูงในงานวิจัย โดยเฉพาะช่วง 0–100 และ 0–200 ms</dd>
+                    <dt>Peak RFD (N/s)</dt>
+                    <dd>ความชันสูงสุดของกราฟแรง คำนวณเป็นช่วงละ 20 ms ระหว่าง onset ถึงแรงสูงสุด ไวต่อสัญญาณรบกวนมากกว่าค่าอื่น</dd>
+                    <dt>RFD 20–80% (N/s)</dt>
+                    <dd>ความชันระหว่างจุดที่แรงถึง 20% และ 80% ของแรงสูงสุด เพี้ยนน้อยเมื่อ onset คลาดเคลื่อน</dd>
+                    <dt>Force @ X ms (N)</dt>
+                    <dd>แรงสุทธิที่ทำได้ ณ X ms หลัง onset เปรียบเทียบง่าย แต่ไวต่อ pretension และคำสั่งของผู้ทดสอบ</dd>
+                    <dt>Impulse 0–X ms (N·s)</dt>
+                    <dd>พื้นที่ใต้กราฟแรงสุทธิ (แรง × เวลา) ตั้งแต่ onset ถึง X ms สะท้อนปริมาณแรงที่สะสมในช่วงเวลาสั้น ๆ เกี่ยวข้องกับความสามารถในการเบรกและชะลอความเร็ว แต่สื่อสารยากและแปรผันมากกว่าค่า RFD</dd>
+                </dl>
+            </details>
+
+            <details>
+                <summary>ความถี่การเก็บข้อมูล (Sampling rate)</summary>
+                <p>งานวิจัยพบว่า 300–500 Hz เพียงพอสำหรับวัด Peak Force และ RFD ในการทดสอบส่วนใหญ่ และค่า RFD แบบช่วงเวลา (0–100, 0–200 ms) เชื่อถือได้ดีแม้ความถี่ต่างกัน งานวิจัยในห้องแล็บระดับหน่วยกล้ามเนื้อแนะนำ 1,000 Hz</p>
+                <p>เครื่องนี้ส่งข้อมูลประมาณ 480 Hz (ห่างกันชุดละ ~2 ms) ซึ่งอยู่ในเกณฑ์เพียงพอ ค่าที่วัดได้จริงแสดงใต้ผลการทดสอบ</p>
+            </details>
+
+            <details>
+                <summary>แหล่งอ้างอิง</summary>
+                <ul class="refs">
+                    <li>VALD Health (2026). <a href="https://valdhealth.com/news/understanding-rate-of-force-development" target="_blank" rel="noopener">Understanding Rate of Force Development</a>.</li>
+                    <li>Aagaard P. et al. (2002). Increased rate of force development and neural drive of human skeletal muscle following resistance training. <i>J Appl Physiol</i>, 93(4), 1318–1326.</li>
+                    <li>Maffiuletti N.A. et al. (2016). Rate of force development: physiological and methodological considerations. <i>Eur J Appl Physiol</i>, 116(6), 1091–1116.</li>
+                    <li>Haff G.G. et al. (2015). A comparison of methods for determining the rate of force development during isometric midthigh clean pulls. <i>J Strength Cond Res</i>, 29(2), 386–395.</li>
+                    <li>Tillin N.A. et al. (2013). Explosive force production during isometric squats correlates with athletic performance in rugby union players. <i>J Sports Sci</i>, 31(1), 66–76.</li>
+                    <li>Knezevic O.M. et al. (2014). Asymmetries in explosive strength following anterior cruciate ligament reconstruction. <i>The Knee</i>, 21(6), 1039–1045.</li>
+                    <li>Renner K.E. et al. (2022). The impact of sampling frequency on ground reaction force variables. <i>J Biomech</i>, 135, 111034.</li>
+                </ul>
+            </details>
+        </div>
+
+        <div id="status" class="status">สถานะ: ยังไม่ได้เชื่อมต่อ</div>
+        <div id="rawDisplay" class="raw-data">Raw: -</div>
+        <div id="rateDisplay" class="raw-data">Rate: -</div>
+    </div>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const forceValueElem = document.getElementById('forceValue');
+        const modeBadgeElem = document.getElementById('modeBadge');
+        const statusElem = document.getElementById('status');
+        const rawDisplayElem = document.getElementById('rawDisplay');
+        const rateElem = document.getElementById('rateDisplay');
+        const unitElem = document.getElementById('unitLabel');
+        const peakValueElem = document.getElementById('peakValue');
+        const peakUnitElem = document.getElementById('peakUnit');
+        const forceNElem = document.getElementById('forceN');
+        const peakNElem = document.getElementById('peakN');
+        const tareBtn = document.getElementById('tareBtn');
+        const resetPeakBtn = document.getElementById('resetPeakBtn');
+        const canvas = document.getElementById('chart');
+        const ctx = canvas.getContext('2d');
+
+        const SERVICE_UUID = 0xffe0;
+        const CHARACTERISTIC_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb";
+
+        // ---- หน่วย: เก็บค่าภายในเป็น Newton ทั้งหมด แสดงผลตามหน่วยใน RAW (kg/lb) พร้อมค่า N ----
+        const N_PER_UNIT = { kg: 9.80665, lb: 4.4482216 };
+        const GRAPH_MIN_RANGE = { kg: 5, lb: 10 };   // สเกลแกน Y ขั้นต่ำของกราฟ
+        let displayUnit = 'kg';   // ตั้งจาก mode byte ของเครื่องเท่านั้น
+
+        let tareN = 0;       // ค่าที่หักออกจากการ Tare
+        let currentN = 0;    // ค่าที่แสดงอยู่ (หัก tare แล้ว)
+        let peakN = 0;       // ค่าสูงสุดในโหมด LIVE (หัก tare แล้ว)
+
+        // ---- ข้อมูลกราฟ ----
+        const WINDOW_MS = 10000;   // แสดงย้อนหลัง 10 วินาที
+        let samples = [];          // { t: เวลา ms, n: แรง N (หัก tare แล้ว) }
+        let lastNotifyTime = null;
+
+        // ---- การวิเคราะห์ RFD ----
+        const TRIGGER_N = 10;              // แรงเหนือ baseline ที่ถือว่าเริ่มการทดสอบ
+        const ONSET_MIN_N = 2;             // เกณฑ์ onset ขั้นต่ำเหนือ baseline (ใช้ 3·SD ถ้ามากกว่า)
+        const RFD_WINDOWS_MS = [50, 100, 150, 200];
+        const FORCE_AT_MS = [50, 100, 150];
+        const IMPULSE_MS = [100, 200];
+        const FILTER_CUTOFF_HZ = 50;       // low-pass ก่อนคำนวณ RFD (กราฟและตัวเลขสดยังใช้ข้อมูลดิบ)
+        const PEAK_RFD_WINDOW_MS = 20;     // ช่วงเวลาที่ใช้หาความชันสูงสุด
+        const MAX_TRIAL_MS = 15000;
+
+        // เวลาของแต่ละเฟรมคิดจากลำดับเฟรม ÷ ความถี่ของเครื่อง (ไม่ใช้เวลาที่ Bluetooth ส่งมาถึง ซึ่งมาเป็นก้อน)
+        let fsEst = null;          // ความถี่การส่งเฟรมของเครื่องที่ประมาณได้ (Hz)
+        let fsFrames = 0;
+        let fsStartTime = null;
+        let frameIdx = 0;          // ลำดับเฟรมสะสม (นับทุกเฟรมรวม HOLD)
+
+        let recent = [];           // เฟรม LIVE ล่าสุด ~2 วินาที { idx, t, n }
+        let trial = null;          // ระหว่างทดสอบ: { frames, base, peak }
+        let trials = [];           // ผลการทดสอบทั้งหมด
+        let detectorState = '';
+
+        const detectorElem = document.getElementById('detector');
+        const fsNoteElem = document.getElementById('fsNote');
+        const trialRowsElem = document.getElementById('trialRows');
+
+        const toDisplay = (n) => n / N_PER_UNIT[displayUnit];
+
+        function updateReadout() {
+            forceValueElem.textContent = toDisplay(currentN).toFixed(1);
+            peakValueElem.textContent = toDisplay(peakN).toFixed(1);
+            forceNElem.textContent = currentN.toFixed(1);
+            peakNElem.textContent = peakN.toFixed(1);
+            unitElem.textContent = displayUnit;
+            peakUnitElem.textContent = displayUnit;
+        }
+
+        tareBtn.addEventListener('click', () => {
+            // ตั้งค่าปัจจุบันเป็นศูนย์ และล้าง Peak กับกราฟให้เริ่มใหม่
+            tareN += currentN;
+            currentN = 0;
+            peakN = 0;
+            samples = [];
+            trial = null;     // ค่าเปลี่ยนกลางการทดสอบ ยกเลิกครั้งนั้น
+            recent = [];
+            updateReadout();
+        });
+
+        resetPeakBtn.addEventListener('click', () => {
+            peakN = 0;
+            updateReadout();
+        });
+
+        // ---- วัดอัตราการรับข้อมูล ----
+        let notifyCount = 0;   // จำนวน notification ที่ได้รับ
+        let byteCount = 0;     // จำนวนไบต์ทั้งหมด
+        let lastTime = performance.now();
+
+        setInterval(() => {
+            const now = performance.now();
+            const sec = (now - lastTime) / 1000;
+            const notifPerSec = notifyCount / sec;
+            const framesPerSec = (byteCount / 3) / sec;   // 1 เฟรม = 3 ไบต์
+            rateElem.textContent =
+                `Rate: ${notifPerSec.toFixed(1)} notif/s | ${framesPerSec.toFixed(1)} Hz (เฟรม/วินาที)`;
+            notifyCount = 0;
+            byteCount = 0;
+            lastTime = now;
+        }, 1000);
+
+        connectBtn.addEventListener('click', async () => {
+            try {
+                statusElem.textContent = "กำลังเปิดหน้าต่างเลือกอุปกรณ์...";
+
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID, 0xffe1]
+                });
+
+                statusElem.textContent = "กำลังเชื่อมต่อกับ " + (device.name || "Bluetooth Device") + "...";
+                const server = await device.gatt.connect();
+
+                statusElem.textContent = "กำลังค้นหา Service...";
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+                statusElem.textContent = "เชื่อมต่อสำเร็จ! กำลังรับข้อมูล...";
+                connectBtn.textContent = "Connected";
+                connectBtn.style.backgroundColor = "#28a745";
+                connectBtn.disabled = true;
+
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    parseData(event.target.value);
+                });
+
+            } catch (error) {
+                console.error(error);
+                statusElem.textContent = "เกิดข้อผิดพลาด: " + error.message;
+            }
+        });
+
+        function parseData(dataView) {
+            notifyCount++;
+            byteCount += dataView.byteLength;
+
+            let hexString = '';
+            for (let i = 0; i < dataView.byteLength; i++) {
+                hexString += ('0' + dataView.getUint8(i).toString(16)).slice(-2).toUpperCase() + '-';
+            }
+            rawDisplayElem.textContent = "Raw: " + hexString.slice(0, -1);
+
+            if (dataView.byteLength < 3) return;
+
+            // ข้อมูลส่งเป็นชุดละ 3 ไบต์: [Weight_High, Weight_Low, Mode]
+            // Mode: nibble ล่าง = หน่วย (1 = kg, 2 = lb), nibble บน = HOLD (1) / LIVE (0)
+            // 0x01 = kg LIVE, 0x11 = kg HOLD, 0x02 = lb LIVE, 0x12 = lb HOLD
+            // ตรวจสอบ phase alignment เผื่อแพ็กเก็ตเริ่มเยื้อง (offset 0, 1 หรือ 2)
+            const isModeByte = (m) => m === 0x01 || m === 0x11 || m === 0x02 || m === 0x12;
+            let offset = 0;
+            for (let i = 0; i <= Math.min(2, dataView.byteLength - 3); i++) {
+                if (isModeByte(dataView.getUint8(i + 2))) {
+                    offset = i;
+                    break;
+                }
+            }
+
+            // แยกเฟรมทั้งหมดในแพ็กเก็ต (16-bit Big-Endian + mode)
+            const frames = [];
+            for (let i = offset; i + 3 <= dataView.byteLength; i += 3) {
+                const mode = dataView.getUint8(i + 2);
+                if (isModeByte(mode)) {
+                    frames.push({ raw: dataView.getUint16(i, false), mode });
+                }
+            }
+            if (frames.length === 0) return;
+
+            // ใช้โหมดของเฟรมสุดท้าย (ล่าสุด)
+            const modeByte = frames[frames.length - 1].mode;
+            const isHold = ((modeByte & 0xF0) === 0x10);
+            const deviceUnit = ((modeByte & 0x0F) === 0x02) ? 'lb' : 'kg';
+
+            // แปลงเป็น Newton (10 หน่วย = 1.0 kg หรือ 1.0 lb ตามหน่วยของเฟรมนั้น) แล้วหัก tare
+            const toN = (f) => (f.raw / 10.0) * N_PER_UNIT[((f.mode & 0x0F) === 0x02) ? 'lb' : 'kg'] - tareN;
+            const isLive = (f) => (f.mode & 0xF0) === 0x00;
+            const sameMode = frames.filter((f) => f.mode === modeByte);
+
+            // ประมาณความถี่ของเครื่องจากจำนวนเฟรมสะสม (เริ่มนับใหม่ถ้าข้อมูลขาดช่วงเกิน 1 วินาที)
+            const now = performance.now();
+            if (fsStartTime === null || now - lastNotifyTime > 1000) {
+                fsStartTime = now;
+                fsFrames = 0;
+            } else {
+                fsFrames += frames.length;
+                const elapsed = (now - fsStartTime) / 1000;
+                if (elapsed >= 1) fsEst = fsFrames / elapsed;
+            }
+            const periodMs = fsEst ? 1000 / fsEst
+                : (lastNotifyTime !== null && now - lastNotifyTime < 500 ? (now - lastNotifyTime) / frames.length : 10);
+            lastNotifyTime = now;
+
+            if (isHold) {
+                currentN = toN(frames[frames.length - 1]);
+            } else {
+                // โหมด LIVE: เฉลี่ยทุกเฟรมในแพ็กเก็ตเพื่อให้ตัวเลขนิ่งขึ้น
+                currentN = sameMode.reduce((s, f) => s + toN(f), 0) / sameMode.length;
+            }
+
+            // ทุกเฟรม: ให้ลำดับและเวลา เฟรมสุดท้ายของแพ็กเก็ต = เวลาปัจจุบัน
+            frames.forEach((f, k) => {
+                const fr = { idx: frameIdx++, t: now - (frames.length - 1 - k) * periodMs, n: toN(f) };
+                if (isLive(f)) {
+                    samples.push({ t: fr.t, n: fr.n });
+                    if (fr.n > peakN) peakN = fr.n;
+                    processLiveFrame(fr);
+                } else if (trial) {
+                    finishTrial();   // เครื่องเข้า HOLD ระหว่างทดสอบ = จบครั้งนั้น
+                }
+            });
+            while (samples.length && samples[0].t < now - WINDOW_MS - 1000) samples.shift();
+
+            displayUnit = deviceUnit;
+            updateReadout();
+
+            modeBadgeElem.textContent = isHold ? "HOLD" : "LIVE";
+            modeBadgeElem.style.backgroundColor = isHold ? "#e67e22" : "#28a745";
+        }
+
+        // ---- ตรวจจับการทดสอบและคำนวณ RFD ----
+        function setDetector(state, text) {
+            if (detectorState === state + text) return;
+            detectorState = state + text;
+            detectorElem.className = 'detector ' + state;
+            detectorElem.textContent = 'การวัด RFD: ' + text;
+        }
+
+        // baseline = แรงช่วงพัก 0.2–0.7 วินาทีก่อนเฟรมนี้ (เว้นช่วงใกล้ ๆ ไว้เผื่อเริ่มออกแรงแล้ว)
+        function baselineStats(frames, t) {
+            const win = frames.filter((f) => f.t >= t - 700 && f.t <= t - 200);
+            if (win.length < 3) return null;
+            const mean = win.reduce((s, f) => s + f.n, 0) / win.length;
+            const sd = Math.sqrt(win.reduce((s, f) => s + (f.n - mean) ** 2, 0) / win.length);
+            return { mean, sd };
+        }
+
+        function processLiveFrame(fr) {
+            recent.push(fr);
+            while (recent.length && recent[0].t < fr.t - 2000) recent.shift();
+
+            if (!trial) {
+                const base = baselineStats(recent, fr.t);
+                if (!base) {
+                    setDetector('', 'รอให้แรงนิ่งสักครู่...');
+                } else if (fr.n > base.mean + TRIGGER_N) {
+                    trial = { frames: recent.slice(), base, peak: fr.n, trigPos: recent.length - 1 };
+                    setDetector('active', 'กำลังบันทึก...');
+                } else {
+                    setDetector('ready', 'พร้อม ออกแรงได้เลย');
+                }
+                return;
+            }
+
+            trial.frames.push(fr);
+            if (fr.n > trial.peak) trial.peak = fr.n;
+            // จบเมื่อคลายแรงต่ำกว่าครึ่งของเกณฑ์เริ่ม หรือนานเกินกำหนด
+            if (fr.n < trial.base.mean + TRIGGER_N / 2 || fr.t - trial.frames[0].t > MAX_TRIAL_MS) {
+                finishTrial();
+            }
+        }
+
+        function finishTrial() {
+            const result = analyzeTrial(trial);
+            trial = null;
+            recent = [];   // ต้องพักให้แรงนิ่งใหม่ก่อนครั้งถัดไป
+            if (result) {
+                result.no = trials.length + 1;
+                trials.push(result);
+                showResult(result);
+                setDetector('', `บันทึกครั้งที่ ${result.no} แล้ว พักให้แรงนิ่งก่อนวัดครั้งถัดไป`);
+            } else {
+                setDetector('', 'ข้อมูลไม่พอคำนวณ ลองใหม่อีกครั้ง');
+            }
+        }
+
+        // Butterworth low-pass อันดับ 2 กรองไปและกลับ (zero-lag, รวมเป็นอันดับ 4) เส้นแรงจึงไม่เลื่อนเวลา
+        function lowPassZeroLag(values, fs, fc) {
+            if (fc >= fs / 2) return values.slice();   // ความถี่เครื่องต่ำเกินกว่าจะกรองที่ fc นี้
+            const K = Math.tan(Math.PI * fc / fs);
+            const norm = 1 / (1 + Math.SQRT2 * K + K * K);
+            const b0 = K * K * norm, b1 = 2 * b0, b2 = b0;
+            const a1 = 2 * (K * K - 1) * norm;
+            const a2 = (1 - Math.SQRT2 * K + K * K) * norm;
+            const pass = (x) => {
+                // เริ่มที่สถานะคงที่ของค่าแรก เพื่อไม่ให้เกิดสัญญาณกระชากตอนต้น
+                const y = new Array(x.length);
+                let x1 = x[0], x2 = x[0], y1 = x[0], y2 = x[0];
+                for (let i = 0; i < x.length; i++) {
+                    y[i] = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+                    x2 = x1; x1 = x[i];
+                    y2 = y1; y1 = y[i];
+                }
+                return y;
+            };
+            return pass(pass(values).reverse()).reverse();
+        }
+
+        function analyzeTrial(tr) {
+            const fs = fsEst;
+            if (!fs || tr.frames.length < 3) return null;
+
+            // ใช้ข้อมูลที่กรองแล้วในการวิเคราะห์ทั้งหมด และหา baseline ใหม่จากข้อมูลที่กรองแล้ว
+            const filtered = lowPassZeroLag(tr.frames.map((f) => f.n), fs, FILTER_CUTOFF_HZ);
+            const fr = tr.frames.map((f, i) => ({ idx: f.idx, t: f.t, n: filtered[i] }));
+            const { mean, sd } = baselineStats(fr, fr[tr.trigPos].t) || tr.base;
+
+            // onset = เฟรมสุดท้ายที่แรงยังไม่เกิน baseline + max(3·SD, ONSET_MIN_N) ก่อนถึงเกณฑ์เริ่ม
+            const onsetThr = mean + Math.max(3 * sd, ONSET_MIN_N);
+            const trig = fr.findIndex((f) => f.n > mean + TRIGGER_N);
+            if (trig < 0) return null;
+            let on = trig;
+            while (on > 0 && fr[on - 1].n > onsetThr) on--;
+            on = Math.max(0, on - 1);
+
+            const F0 = fr[on].n;
+            const sec = (i) => (fr[i].idx - fr[on].idx) / fs;
+
+            let p = on;
+            for (let i = on; i < fr.length; i++) if (fr[i].n > fr[p].n) p = i;
+            const netPeak = fr[p].n - F0;
+            if (p === on || netPeak < TRIGGER_N) return null;
+
+            // แรง ณ เวลา tau วินาทีหลัง onset (interpolate เชิงเส้นตามลำดับเฟรม)
+            const forceAt = (tau) => {
+                const target = fr[on].idx + tau * fs;
+                for (let i = on; i < fr.length - 1; i++) {
+                    if (fr[i + 1].idx >= target) {
+                        const a = (target - fr[i].idx) / (fr[i + 1].idx - fr[i].idx);
+                        return fr[i].n + a * (fr[i + 1].n - fr[i].n);
+                    }
+                }
+                return null;
+            };
+
+            const rfd = {};
+            for (const ms of RFD_WINDOWS_MS) {
+                const tau = ms / 1000;
+                const F = tau * fs >= 1 ? forceAt(tau) : null;   // สั้นกว่า 1 เฟรม = คำนวณไม่ได้
+                rfd[ms] = F === null ? null : (F - F0) / tau;
+            }
+
+            // Peak RFD: ความชันสูงสุดในช่วง ~20 ms ระหว่าง onset ถึง peak
+            const k = Math.max(1, Math.round(PEAK_RFD_WINDOW_MS / 1000 * fs));
+            let peakRfd = netPeak / sec(p);
+            for (let i = on; i + k <= p; i++) {
+                const slope = (fr[i + k].n - fr[i].n) / ((fr[i + k].idx - fr[i].idx) / fs);
+                if (slope > peakRfd) peakRfd = slope;
+            }
+
+            // RFD 20–80%: ความชันระหว่างจุดที่แรงถึง 20% และ 80% ของ peak สุทธิ
+            const crossTime = (frac) => {
+                const level = F0 + frac * netPeak;
+                for (let i = on + 1; i <= p; i++) {
+                    if (fr[i].n >= level) {
+                        const a = (level - fr[i - 1].n) / (fr[i].n - fr[i - 1].n);
+                        return sec(i - 1) + a * (sec(i) - sec(i - 1));
+                    }
+                }
+                return null;
+            };
+            const t20 = crossTime(0.2), t80 = crossTime(0.8);
+            const rfd2080 = (t20 !== null && t80 !== null && t80 > t20) ? 0.6 * netPeak / (t80 - t20) : null;
+
+            // แรงสุทธิ ณ เวลาที่กำหนดหลัง onset
+            const forceAtMs = {};
+            for (const ms of FORCE_AT_MS) {
+                const F = forceAt(ms / 1000);
+                forceAtMs[ms] = F === null ? null : F - F0;
+            }
+
+            // Impulse สุทธิ (พื้นที่ใต้กราฟ F − F0) จาก onset ถึง tau วินาที แบบสี่เหลี่ยมคางหมู
+            const impulseTo = (tau) => {
+                const target = fr[on].idx + tau * fs;
+                if (fr[fr.length - 1].idx < target) return null;
+                let sum = 0;
+                for (let i = on; i < fr.length - 1 && fr[i].idx < target; i++) {
+                    const a = fr[i], b = fr[i + 1];
+                    const bIdx = Math.min(b.idx, target);
+                    const bN = a.n + (bIdx - a.idx) / (b.idx - a.idx) * (b.n - a.n);
+                    sum += ((a.n - F0) + (bN - F0)) / 2 * (bIdx - a.idx) / fs;
+                }
+                return sum;
+            };
+            const impulse = {};
+            for (const ms of IMPULSE_MS) impulse[ms] = impulseTo(ms / 1000);
+
+            return {
+                peakN: fr[p].n - mean,
+                ttpMs: sec(p) * 1000,
+                t80Ms: t80 === null ? null : t80 * 1000,
+                rfd, peakRfd, rfd2080, forceAtMs, impulse, fs,
+                onsetT: fr[on].t,
+                peakT: fr[p].t,
+                peakAbsN: fr[p].n,
+            };
+        }
+
+        const fmtN = (v) => v === null ? '–' : Math.round(v).toLocaleString('en-US');
+
+        function showResult(r) {
+            const set = (id, v, unit) => {
+                document.getElementById(id).innerHTML = v === null ? '–' : `${v} <small>${unit}</small>`;
+            };
+            const ms = (v) => v === null ? null : Math.round(v);
+            const n1 = (v) => v === null ? null : v.toFixed(1);
+            const nps = (v) => v === null ? null : fmtN(v);
+            set('rPeak', n1(r.peakN), 'N');
+            set('rT80', ms(r.t80Ms), 'ms');
+            set('rTtp', ms(r.ttpMs), 'ms');
+            set('rRfd50', nps(r.rfd[50]), 'N/s');
+            set('rRfd100', nps(r.rfd[100]), 'N/s');
+            set('rRfd150', nps(r.rfd[150]), 'N/s');
+            set('rRfd200', nps(r.rfd[200]), 'N/s');
+            set('rPeakRfd', nps(r.peakRfd), 'N/s');
+            set('rRfd2080', nps(r.rfd2080), 'N/s');
+            set('rF50', n1(r.forceAtMs[50]), 'N');
+            set('rF100', n1(r.forceAtMs[100]), 'N');
+            set('rF150', n1(r.forceAtMs[150]), 'N');
+            set('rImp100', r.impulse[100] === null ? null : r.impulse[100].toFixed(2), 'N·s');
+            set('rImp200', r.impulse[200] === null ? null : r.impulse[200].toFixed(2), 'N·s');
+
+            // งานวิจัยถือว่า 300–500 Hz เพียงพอสำหรับ Peak Force และ RFD
+            const periodMs = 1000 / r.fs;
+            fsNoteElem.style.color = r.fs >= 300 ? '#7f8c8d' : '#e67e22';
+            fsNoteElem.textContent = `ความถี่เครื่อง ≈ ${r.fs.toFixed(0)} Hz (1 เฟรม ≈ ${periodMs.toFixed(1)} ms) ` +
+                (r.fs >= 300 ? 'เพียงพอสำหรับวัด RFD (เกณฑ์ 300–500 Hz)'
+                    : 'ต่ำกว่าเกณฑ์ 300 Hz ค่า RFD ช่วงสั้น ๆ (0–50 ms) และ Peak RFD อาจคลาดเคลื่อน') +
+                ` · กรองด้วย low-pass ${FILTER_CUTOFF_HZ} Hz (Butterworth zero-lag) ก่อนคำนวณ`;
+
+            const tr = document.createElement('tr');
+            [r.no, r.peakN.toFixed(1), r.t80Ms === null ? '–' : Math.round(r.t80Ms), Math.round(r.ttpMs),
+             fmtN(r.rfd[50]), fmtN(r.rfd[100]), fmtN(r.rfd[150]), fmtN(r.rfd[200]),
+             fmtN(r.peakRfd), fmtN(r.rfd2080)].forEach((v) => {
+                const td = document.createElement('td');
+                td.textContent = v;
+                tr.appendChild(td);
+            });
+            trialRowsElem.prepend(tr);
+        }
+
+        document.getElementById('clearTrialsBtn').addEventListener('click', () => {
+            trials = [];
+            trialRowsElem.innerHTML = '';
+            fsNoteElem.textContent = '';
+            document.querySelectorAll('.tile .value').forEach((el) => { el.textContent = '–'; });
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            if (!trials.length) return;
+            const r1 = (v) => v === null ? '' : v.toFixed(1);
+            const r3 = (v) => v === null ? '' : v.toFixed(3);
+            const lines = ['trial,peak_N,time_to_80pct_peak_ms,time_to_peak_ms,' +
+                'rfd_0_50_Nps,rfd_0_100_Nps,rfd_0_150_Nps,rfd_0_200_Nps,peak_rfd_Nps,rfd_20_80_Nps,' +
+                'force_at_50ms_N,force_at_100ms_N,force_at_150ms_N,impulse_0_100ms_Ns,impulse_0_200ms_Ns,fs_Hz,filter'];
+            trials.forEach((r) => lines.push([r.no, r1(r.peakN), r1(r.t80Ms), r1(r.ttpMs),
+                r1(r.rfd[50]), r1(r.rfd[100]), r1(r.rfd[150]), r1(r.rfd[200]), r1(r.peakRfd), r1(r.rfd2080),
+                r1(r.forceAtMs[50]), r1(r.forceAtMs[100]), r1(r.forceAtMs[150]),
+                r3(r.impulse[100]), r3(r.impulse[200]), r1(r.fs),
+                `Butterworth 2nd-order zero-lag ${FILTER_CUTOFF_HZ}Hz`].join(',')));
+            const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `rfd-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        });
+
+        // ---- วาดกราฟ ----
+        function niceStep(range) {
+            const rough = range / 4;
+            const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+            const m = rough / pow;
+            return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * pow;
+        }
+
+        function draw() {
+            const dpr = window.devicePixelRatio || 1;
+            const w = canvas.clientWidth;
+            const h = canvas.clientHeight;
+            if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+                canvas.width = Math.round(w * dpr);
+                canvas.height = Math.round(h * dpr);
+            }
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+
+            const padL = 44, padR = 10, padT = 10, padB = 22;
+            const plotW = w - padL - padR;
+            const plotH = h - padT - padB;
+            const now = performance.now();
+            const tMin = now - WINDOW_MS;
+
+            const visible = samples.filter((s) => s.t >= tMin);
+            let vMax = toDisplay(peakN);
+            let vMin = 0;
+            for (const s of visible) {
+                const v = toDisplay(s.n);
+                if (v > vMax) vMax = v;
+                if (v < vMin) vMin = v;
+            }
+            const step = niceStep(Math.max((vMax - vMin) * 1.15, GRAPH_MIN_RANGE[displayUnit]));
+            const yMax = Math.ceil(vMax * 1.15 / step) * step || step;
+            const yMin = Math.floor(vMin / step) * step;
+
+            const xOf = (t) => padL + ((t - tMin) / WINDOW_MS) * plotW;
+            const yOf = (v) => padT + (1 - (v - yMin) / (yMax - yMin)) * plotH;
+
+            // เส้นตารางและตัวเลขแกน Y
+            ctx.font = '11px Segoe UI, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let v = yMin; v <= yMax + step / 2; v += step) {
+                const y = yOf(v);
+                ctx.strokeStyle = Math.abs(v) < step / 2 ? '#bdc3c7' : '#ecf0f1';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(padL, y);
+                ctx.lineTo(w - padR, y);
+                ctx.stroke();
+                ctx.fillStyle = '#95a5a6';
+                ctx.fillText(+v.toFixed(2) + '', padL - 6, y);
+            }
+
+            // ตัวเลขแกนเวลา
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            for (let s = 10; s >= 0; s -= 2) {
+                ctx.fillText(s === 0 ? '0s' : `-${s}s`, xOf(now - s * 1000), h - padB + 6);
+            }
+
+            // เส้น Peak
+            if (peakN > 0) {
+                const y = yOf(toDisplay(peakN));
+                ctx.strokeStyle = '#c0392b';
+                ctx.setLineDash([5, 4]);
+                ctx.beginPath();
+                ctx.moveTo(padL, y);
+                ctx.lineTo(w - padR, y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // เส้นแรง
+            if (visible.length > 1) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(padL, padT, plotW, plotH);
+                ctx.clip();
+                ctx.strokeStyle = '#007bff';
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                visible.forEach((s, i) => {
+                    const x = xOf(s.t), y = yOf(toDisplay(s.n));
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // จุด onset (เส้นเขียว) และ peak (จุดแดง) ของการทดสอบล่าสุด
+            const last = trials[trials.length - 1];
+            if (last && last.onsetT >= tMin) {
+                const x = xOf(last.onsetT);
+                ctx.strokeStyle = '#28a745';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(x, padT);
+                ctx.lineTo(x, padT + plotH);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#c0392b';
+                ctx.beginPath();
+                ctx.arc(xOf(last.peakT), yOf(toDisplay(last.peakAbsN)), 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            requestAnimationFrame(draw);
+        }
+        requestAnimationFrame(draw);
+    </script>
+</body>
+</html>

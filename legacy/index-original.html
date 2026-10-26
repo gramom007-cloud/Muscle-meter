@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Muscle Meter Live Reader</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            text-align: center;
+            padding: 50px;
+        }
+        .card {
+            background: white;
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .force-display {
+            font-size: 56px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 20px 0;
+        }
+        .unit {
+            font-size: 24px;
+            color: #7f8c8d;
+        }
+        .status {
+            font-size: 14px;
+            color: #e67e22;
+            margin-top: 15px;
+            word-break: break-all;
+        }
+        .mode-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+            background-color: #6c757d;
+            border-radius: 20px;
+            margin-top: 10px;
+            letter-spacing: 1px;
+            transition: background-color 0.2s;
+        }
+        .raw-data {
+            font-size: 11px;
+            color: #95a5a6;
+            margin-top: 10px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Muscle Meter Live</h2>
+        <button id="connectBtn">Connect Bluetooth</button>
+        
+        <div>
+            <span id="modeBadge" class="mode-badge">STANDBY</span>
+        </div>
+
+        <div class="force-display">
+            <span id="forceValue">0.0</span> <span class="unit">kg</span>
+        </div>
+        
+        <div id="status" class="status">สถานะ: ยังไม่ได้เชื่อมต่อ</div>
+        <div id="rawDisplay" class="raw-data">Raw: -</div>
+	<div id="rateDisplay" class="raw-data">Rate: -</div>
+    </div>
+
+    <script>
+	const rateElem = document.getElementById('rateDisplay');
+let notifyCount = 0;   // จำนวน notification ที่ได้รับ
+let byteCount = 0;     // จำนวนไบต์ทั้งหมด
+let lastTime = performance.now();
+
+setInterval(() => {
+    const now = performance.now();
+    const sec = (now - lastTime) / 1000;
+    const notifPerSec = notifyCount / sec;
+    const framesPerSec = (byteCount / 3) / sec;   // 1 เฟรม = 3 ไบต์
+    rateElem.textContent =
+        `Rate: ${notifPerSec.toFixed(1)} notif/s | ${framesPerSec.toFixed(1)} Hz (เฟรม/วินาที)`;
+    console.log(`notif/s=${notifPerSec.toFixed(1)}  Hz=${framesPerSec.toFixed(1)}`);
+    notifyCount = 0;
+    byteCount = 0;
+    lastTime = now;
+}, 1000);const rateElem = document.getElementById('rateDisplay');
+let notifyCount = 0;   // จำนวน notification ที่ได้รับ
+let byteCount = 0;     // จำนวนไบต์ทั้งหมด
+let lastTime = performance.now();
+
+setInterval(() => {
+    const now = performance.now();
+    const sec = (now - lastTime) / 1000;
+    const notifPerSec = notifyCount / sec;
+    const framesPerSec = (byteCount / 3) / sec;   // 1 เฟรม = 3 ไบต์
+    rateElem.textContent =
+        `Rate: ${notifPerSec.toFixed(1)} notif/s | ${framesPerSec.toFixed(1)} Hz (เฟรม/วินาที)`;
+    console.log(`notif/s=${notifPerSec.toFixed(1)}  Hz=${framesPerSec.toFixed(1)}`);
+    notifyCount = 0;
+    byteCount = 0;
+    lastTime = now;
+}, 1000);
+        const connectBtn = document.getElementById('connectBtn');
+        const forceValueElem = document.getElementById('forceValue');
+        const modeBadgeElem = document.getElementById('modeBadge');
+        const statusElem = document.getElementById('status');
+        const rawDisplayElem = document.getElementById('rawDisplay');
+
+        const SERVICE_UUID = 0xffe0;
+        const CHARACTERISTIC_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb";
+
+        connectBtn.addEventListener('click', async () => {
+            try {
+                statusElem.textContent = "กำลังเปิดหน้าต่างเลือกอุปกรณ์...";
+                
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID, 0xffe1]
+                });
+
+                statusElem.textContent = "กำลังเชื่อมต่อกับ " + (device.name || "Bluetooth Device") + "...";
+                const server = await device.gatt.connect();
+                
+                statusElem.textContent = "กำลังค้นหา Service...";
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+                statusElem.textContent = "เชื่อมต่อสำเร็จ! กำลังรับข้อมูล...";
+                connectBtn.textContent = "Connected";
+                connectBtn.style.backgroundColor = "#28a745";
+                connectBtn.disabled = true;
+
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const value = event.target.value;
+                    parseData(value);
+	function parseData(dataView) {
+    notifyCount++;
+    byteCount += dataView.byteLength;
+    // ... โค้ดเดิมต่อจากนี้
+                });
+
+            } catch (error) {
+                console.error(error);
+                statusElem.textContent = "เกิดข้อผิดพลาด: " + error.message;
+            }
+        });
+
+        function parseData(dataView) {
+            let hexString = '';
+            for (let i = 0; i < dataView.byteLength; i++) {
+                hexString += ('0' + dataView.getUint8(i).toString(16)).slice(-2).toUpperCase() + '-';
+            }
+            rawDisplayElem.textContent = "Raw: " + hexString.slice(0, -1);
+
+            if (dataView.byteLength >= 3) {
+                // ข้อมูลส่งเป็นชุดละ 3 ไบต์: [Weight_High, Weight_Low, Mode]
+                // Mode 0x01 = LIVE, 0x11 = HOLD
+                // ตรวจสอบ phase alignment เผื่อแพ็กเก็ตเริ่มเยื้อง (offset 0, 1 หรือ 2)
+                let offset = 0;
+                for (let i = 0; i <= Math.min(2, dataView.byteLength - 3); i++) {
+                    const m = dataView.getUint8(i + 2);
+                    if (m === 0x01 || m === 0x11) {
+                        offset = i;
+                        break;
+                    }
+                }
+
+                // ดึงค่าแรง (16-bit Big-Endian จาก Byte 0 และ 1)
+                const rawWeight = dataView.getUint16(offset, false);
+                const modeByte = dataView.getUint8(offset + 2);
+
+                // คำนวณน้ำหนัก (10 หน่วย = 1.0 kg)
+                const calculatedKg = rawWeight / 10.0;
+                forceValueElem.textContent = calculatedKg.toFixed(1);
+
+                // แสดงสถานะโหมด LIVE หรือ HOLD
+                const isHold = (modeByte === 0x11);
+                modeBadgeElem.textContent = isHold ? "HOLD" : "LIVE";
+                modeBadgeElem.style.backgroundColor = isHold ? "#e67e22" : "#28a745";
+            }
+        }
+    </script>
+</body>
+</html>

@@ -21,10 +21,14 @@
             --onset: #2bd47d;
             --rec: #ff3b4e;
             --trace: #e9edf2;
+            --left: #5ab8ff;
+            --right: #c792ff;
+            --warn: #f5b942;
             --num: 'Barlow Condensed', 'IBM Plex Sans Thai', system-ui, sans-serif;
             --text: 'IBM Plex Sans Thai', system-ui, 'Segoe UI', sans-serif;
         }
         * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
         html { -webkit-text-size-adjust: 100%; }
         body {
             margin: 0;
@@ -36,17 +40,26 @@
         .force-display, .newton, .peak-display { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
         button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px solid var(--peak); outline-offset: 2px; }
         .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+
+        /* ---- โครงหน้า: ตัวเลขและกราฟอยู่บนจอตลอด ส่วนอื่นอยู่ในแท็บ ไม่ต้องเลื่อนทั้งหน้า ---- */
         .app {
-            max-width: 1400px; margin: 0 auto;
-            padding: max(16px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
+            height: 100vh; height: 100dvh;
+            max-width: 1600px; margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: "head" "run" "meter" "ctl" "chart" "dock";
+            grid-template-rows: auto auto auto auto minmax(150px, 46fr) minmax(200px, 54fr);
+            padding: max(6px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
         }
+        .app > * { min-width: 0; margin-bottom: 10px; }
+        .app > .dock { margin-bottom: 0; }
 
         /* ---- หัว ---- */
-        header { display: flex; align-items: center; gap: 14px; min-height: 44px; }
+        header { grid-area: head; display: flex; align-items: center; gap: 12px; min-height: 44px; }
         .brand { font-family: var(--num); font-weight: 700; letter-spacing: .14em; font-size: 18px; white-space: nowrap; }
-        .status { margin-left: auto; color: var(--mute); font-size: 14px; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+        .status { margin-left: auto; color: var(--mute); font-size: 14px; text-align: right; min-width: 0; overflow-wrap: anywhere; line-height: 1.35; }
         .connect {
-            flex: none; border: 0; border-radius: 6px; padding: 9px 16px;
+            flex: none; border: 0; border-radius: 6px; padding: 9px 16px; min-height: 40px;
             background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; white-space: nowrap;
             transition: background-color .2s, color .2s, transform .1s;
         }
@@ -55,12 +68,17 @@
         .connect.on::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--onset); margin-right: 8px; vertical-align: 1px; }
 
         /* ---- ค่าแรงสด ---- */
-        .hero { display: grid; grid-template-columns: 1fr 360px; gap: 28px; margin-top: 18px; }
+        .meter {
+            grid-area: meter; display: grid; gap: 8px 14px; align-items: end;
+            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-areas: "det badge" "live peak";
+        }
         .detector {
-            display: inline-flex; align-items: center; gap: 10px;
-            padding: 8px 16px 8px 14px; border-radius: 4px;
+            grid-area: det; justify-self: start; align-self: center;
+            display: inline-flex; align-items: center; gap: 9px;
+            padding: 6px 14px 6px 12px; border-radius: 4px;
             background: var(--panel-2); color: var(--mute);
-            font-weight: 600; font-size: 17px;
+            font-weight: 600; font-size: 15px; line-height: 1.35;
             transition: background-color .25s, color .25s;
         }
         .detector::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
@@ -68,86 +86,108 @@
         .detector.active { background: var(--rec); color: #fff; }
         .detector.active::before { animation: blink 1s steps(2) infinite; }
         @keyframes blink { 50% { opacity: .25; } }
-        .force-display { display: flex; align-items: baseline; gap: 14px; line-height: .82; margin-top: 20px; }
-        #forceValue { font-size: clamp(112px, 18vw, 250px); font-weight: 600; letter-spacing: -.02em; }
-        .unit { font-family: var(--num); font-size: 56px; font-weight: 500; color: var(--mute); }
-        .newton { font-family: var(--num); font-size: 40px; font-weight: 500; color: var(--mute); margin-top: 14px; }
-        .newton b { color: var(--ink); font-weight: 600; }
-
-        .side { display: flex; flex-direction: column; gap: 14px; }
         .mode-badge {
-            align-self: flex-start;
-            justify-self: start;
-            font-family: var(--num); font-weight: 700; font-size: 18px; letter-spacing: .12em;
-            padding: 3px 14px; border-radius: 4px; color: #fff; background-color: var(--faint);
+            grid-area: badge; justify-self: end; align-self: center;
+            font-family: var(--num); font-weight: 700; font-size: 16px; letter-spacing: .12em;
+            padding: 2px 12px; border-radius: 4px; color: #fff; background-color: var(--faint);
             transition: background-color .2s;
         }
-        .peak-display { background: var(--panel); border-left: 4px solid var(--peak); border-radius: 6px; padding: 14px 18px; flex: 1; }
-        .peak-display .lbl { color: var(--mute); font-size: 15px; }
-        .peak-display .v { font-family: var(--num); font-size: 76px; font-weight: 600; color: var(--peak); line-height: 1; margin-top: 4px; }
-        .peak-display .v small { font-size: 28px; font-weight: 500; color: var(--mute); }
-        .peak-display .n { font-family: var(--num); font-size: 26px; color: var(--mute); }
-        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .actions button { height: 64px; border-radius: 6px; font-weight: 600; font-size: 18px; border: 0; transition: transform .1s, filter .15s; }
-        .actions button:active { transform: scale(.97); }
+        .live { grid-area: live; min-width: 0; }
+        .force-display { display: flex; align-items: baseline; gap: 8px; line-height: .82; }
+        #forceValue { font-size: 84px; font-weight: 600; letter-spacing: -.02em; }
+        .unit { font-family: var(--num); font-size: 28px; font-weight: 500; color: var(--mute); }
+        .newton { font-family: var(--num); font-size: 22px; font-weight: 500; color: var(--mute); margin-top: 6px; line-height: 1.1; }
+        .newton b { color: var(--ink); font-weight: 600; }
+        .peak-display { grid-area: peak; min-width: 132px; background: var(--panel); border-left: 4px solid var(--peak); border-radius: 6px; padding: 6px 14px 8px; }
+        .peak-display .lbl { color: var(--mute); font-size: 13px; }
+        .peak-display .v { font-family: var(--num); font-size: 40px; font-weight: 600; color: var(--peak); line-height: 1; }
+        .peak-display .v small { font-size: 18px; font-weight: 500; color: var(--mute); }
+        .peak-display .n { font-family: var(--num); font-size: 18px; color: var(--mute); line-height: 1.2; }
+
+        /* ---- ปุ่มควบคุม ---- */
+        .controls { grid-area: ctl; display: flex; align-items: center; gap: 8px; }
+        .controls > button { flex: none; height: 48px; padding: 0 16px; border: 0; border-radius: 6px; font-weight: 600; font-size: 16px; white-space: nowrap; transition: transform .1s, filter .15s; }
+        .controls > button:active { transform: scale(.97); }
         .btn-tare { background: var(--ink); color: var(--bg); }
         .btn-reset { background: var(--panel); color: var(--peak); box-shadow: inset 0 0 0 1px var(--peak); }
-        @media (hover: hover) { .actions button:hover { filter: brightness(1.08); } }
+        .btn-plan { margin-left: auto; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line); }
+        @media (hover: hover) { .controls > button:hover { filter: brightness(1.1); } }
+        .side-pick { display: flex; align-items: center; gap: 8px; color: var(--mute); font-size: 14px; white-space: nowrap; }
+        /* ป้ายปุ่มยาว/สั้นตามความกว้างจอ: .sm มือถือ, .lg ตั้งแต่ 600 px, .xl ตั้งแต่ 1280 px */
+        .sm { display: none; }
+        @media (max-width: 1279px) { .xl { display: none; } }
 
-        /* ---- กราฟสด ---- */
-        .chart-box { position: relative; height: 280px; margin-top: 22px; background: var(--panel); border-radius: 8px; }
-        .chart-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-
-        /* ---- ผลการทดสอบ ---- */
-        .results { margin-top: 36px; }
-        .sec-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-        .sec-head h2 { margin: 0; font-size: 22px; font-weight: 600; }
-        .trial-nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-        .icon-btn {
-            width: 40px; height: 40px; border-radius: 6px; border: 0;
-            background: var(--panel-2); font-size: 20px; line-height: 1;
-        }
-        .icon-btn:disabled { opacity: .35; cursor: default; }
-        .trial-tag { font-family: var(--num); font-size: 26px; font-weight: 600; min-width: 112px; text-align: center; }
-        .trial-tag small { font-family: var(--text); font-size: 14px; color: var(--mute); font-weight: 400; margin-right: 6px; }
-
-        .detail { background: var(--panel); border-radius: 8px; padding: 16px 18px 18px; }
-        .detail.flash { animation: flash .7s ease-out; }
-        @keyframes flash { from { box-shadow: 0 0 0 2px var(--peak); } to { box-shadow: 0 0 0 2px transparent; } }
-        .detail-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .seg { display: inline-flex; background: var(--bg); border-radius: 6px; padding: 3px; }
-        .seg button { border: 0; background: none; padding: 6px 12px; border-radius: 4px; font-size: 14px; color: var(--mute); }
+        .seg { display: inline-flex; flex: none; background: var(--bg); border-radius: 6px; padding: 3px; }
+        .seg button { border: 0; background: none; padding: 6px 12px; border-radius: 4px; font-size: 14px; color: var(--mute); white-space: nowrap; }
         .seg button.on { background: var(--panel-2); color: var(--ink); }
-        .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--mute); }
+        .seg button:disabled { cursor: default; opacity: .4; }
+        .seg button[data-side].on { color: #0b0d10; font-weight: 600; }
+        .seg button[data-side=""].on { background: var(--panel-2); color: var(--ink); }
+        .seg button[data-side="L"].on { background: var(--left); }
+        .seg button[data-side="R"].on { background: var(--right); }
+        .side-pick .seg button { padding: 9px 14px; font-size: 15px; }
+        .chip { display: inline-block; font-family: var(--text); font-size: 13px; font-weight: 600; padding: 1px 8px; border-radius: 4px; color: #0b0d10; vertical-align: 3px; }
+        .chip.L { background: var(--left); }
+        .chip.R { background: var(--right); }
+        td .chip { vertical-align: 1px; }
+
+        /* ---- กราฟหลัก: สลับระหว่างกราฟสด 10 วินาที กับกราฟของครั้งที่เลือก ---- */
+        .chart-box { grid-area: chart; display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-radius: 8px; }
+        .chart-bar { display: flex; align-items: center; gap: 8px 12px; padding: 8px 10px 0; flex-wrap: wrap; }
+        .chart-bar .seg { background: var(--bg); }
+        .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--mute); margin-left: auto; padding-right: 4px; }
         .legend i { display: inline-block; width: 14px; height: 0; border-top: 2px dashed; vertical-align: 4px; margin-right: 6px; }
         .legend .dot { width: 9px; height: 9px; border: 0; border-radius: 50%; vertical-align: 0; }
-        .btn-exclude { margin-left: auto; border: 0; background: none; color: var(--mute); font-size: 14px; padding: 6px 4px; text-decoration: underline; text-underline-offset: 3px; }
-        .trial-chart { position: relative; height: 240px; margin-top: 12px; }
-        .trial-chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+        .plot { position: relative; flex: 1; min-height: 110px; }
+        .plot canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--mute); padding: 16px; }
-        .empty[hidden] { display: none; }
+        .chart-box:not(.trial) .empty { display: none; }
+
+        /* ---- แท็บด้านล่าง/ด้านข้าง ---- */
+        .dock { grid-area: dock; display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-radius: 8px; overflow: hidden; }
+        .tabs { display: flex; flex: none; border-bottom: 1px solid var(--line); }
+        .tabs button {
+            flex: 1; position: relative; min-height: 48px; padding: 10px 4px; border: 0; background: none;
+            color: var(--mute); font-weight: 600; font-size: 15px; white-space: nowrap;
+            transition: color .15s, box-shadow .15s;
+        }
+        .tabs button.on { color: var(--ink); box-shadow: inset 0 -3px 0 var(--peak); }
+        .tabs button.dot::after { content: ''; position: absolute; top: 10px; margin-left: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--peak); }
+        @media (hover: hover) { .tabs button:not(.on):hover { color: var(--ink); } }
+        .panel { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 16px 16px; container-type: inline-size; }
+
+        /* ---- แท็บผล ---- */
+        .detail.flash { animation: flash .8s ease-out; }
+        @keyframes flash { from { background: rgba(255, 106, 26, .14); } }
+        .trial-head { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+        .trial-nav { display: flex; align-items: center; gap: 4px; }
+        .icon-btn { width: 44px; height: 44px; border-radius: 6px; border: 0; background: var(--panel-2); font-size: 22px; line-height: 1; }
+        .icon-btn:disabled { opacity: .35; cursor: default; }
+        .trial-tag { font-family: var(--num); font-size: 24px; font-weight: 600; min-width: 104px; text-align: center; white-space: nowrap; }
+        .trial-tag small { font-family: var(--text); font-size: 13px; color: var(--mute); font-weight: 400; margin-right: 6px; }
+        .btn-exclude { margin-left: auto; border: 0; background: none; color: var(--mute); font-size: 14px; padding: 10px 4px; text-decoration: underline; text-underline-offset: 3px; }
         .excluded-note { display: none; color: var(--peak); font-size: 14px; margin-top: 8px; }
         .detail.excluded .excluded-note { display: block; }
         .detail.excluded .groups { opacity: .45; }
 
-        .groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px 22px; margin-top: 18px; }
-        .group-title { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
-        .group-title .hint { font-weight: 400; color: var(--mute); font-size: 13px; margin-left: 4px; }
+        .groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 10px 18px; margin-top: 10px; }
+        .group-title { font-size: 13px; font-weight: 600; margin: 0 0 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .group-title .hint { font-weight: 400; color: var(--mute); font-size: 12px; margin-left: 4px; }
         .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border-radius: 6px; overflow: hidden; }
-        .tile { background: var(--panel-2); padding: 10px 12px; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 2px; }
-        .tile .label { font-size: 13px; color: var(--mute); line-height: 1.35; }
-        .tile .value { font-family: var(--num); font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 600; line-height: 1.15; white-space: nowrap; }
-        .tile .value small { font-size: 15px; font-weight: 500; color: var(--mute); margin-left: 3px; }
+        .tile { background: var(--panel-2); padding: 6px 10px; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 1px; }
+        .tile .label { font-size: 12px; color: var(--mute); line-height: 1.3; }
+        .tile .value { font-family: var(--num); font-variant-numeric: tabular-nums; font-size: 25px; font-weight: 600; line-height: 1.15; white-space: nowrap; }
+        .tile .value small { font-size: 13px; font-weight: 500; color: var(--mute); margin-left: 3px; }
         .tile.key .value { color: var(--peak); }
-        .fs-note { font-size: 13px; color: var(--mute); margin-top: 14px; }
+        .fs-note { font-size: 12px; color: var(--mute); margin-top: 12px; }
 
-        .history { margin-top: 18px; }
-        .history h3 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
-        .table-wrap { overflow-x: auto; background: var(--panel); border-radius: 8px; }
+        /* ---- แท็บประวัติ ---- */
+        .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
         table { width: 100%; border-collapse: collapse; font-family: var(--num); font-size: 18px; font-variant-numeric: tabular-nums; }
         th, td { padding: 9px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
-        th { font-family: var(--text); font-size: 13px; font-weight: 500; color: var(--mute); }
+        th { font-family: var(--text); font-size: 13px; font-weight: 500; color: var(--mute); position: sticky; top: 0; background: var(--panel); }
         th:first-child, td:first-child { text-align: left; }
+        tbody tr:last-child td { border-bottom: 0; }
         tbody tr { cursor: pointer; transition: background-color .15s; }
         @media (hover: hover) { tbody tr:hover { background: var(--panel-2); } }
         tbody tr.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--peak); }
@@ -160,12 +200,11 @@
         @media (hover: hover) { .btn-light:hover { background: var(--line); } }
         .btn-danger { color: #ff8a8a; }
 
-        /* ---- คู่มือ ---- */
-        .guide { margin-top: 44px; max-width: 860px; }
-        .guide h2 { font-size: 22px; font-weight: 600; margin: 0 0 12px; }
+        /* ---- แท็บคู่มือ ---- */
+        .guide { max-width: 860px; }
         .guide details { border-top: 1px solid var(--line); }
-        .guide details:last-of-type { border-bottom: 1px solid var(--line); }
-        .guide summary { cursor: pointer; padding: 14px 2px; font-weight: 600; font-size: 16px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+        .guide details:first-child { border-top: 0; }
+        .guide summary { cursor: pointer; padding: 13px 2px; font-weight: 600; font-size: 16px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
         .guide summary::-webkit-details-marker { display: none; }
         .guide summary::after { content: '+'; color: var(--mute); font-weight: 400; font-size: 20px; line-height: 1; }
         .guide details[open] summary::after { content: '–'; }
@@ -178,48 +217,30 @@
         .guide dd { margin: 2px 0 0; }
         .guide .refs { font-size: 14px; }
         .guide a { color: var(--peak); }
-
-        /* ---- ดีบัก ---- */
-        .debug { margin-top: 28px; color: var(--faint); font-size: 13px; }
-        .debug summary { cursor: pointer; }
+        .debug { margin-top: 18px; color: var(--faint); font-size: 13px; }
+        .debug summary { cursor: pointer; padding: 8px 0; }
         .raw-data { font-family: ui-monospace, Consolas, monospace; font-size: 12px; word-break: break-all; margin-top: 6px; }
-
-        /* ---- ซ้าย/ขวา ---- */
-        :root { --left: #5ab8ff; --right: #c792ff; --warn: #f5b942; }
-        .side-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--mute); font-size: 14px; }
-        .seg button[data-side].on { color: #0b0d10; font-weight: 600; }
-        .seg button[data-side=""].on { background: var(--panel-2); color: var(--ink); }
-        .seg button[data-side="L"].on { background: var(--left); }
-        .seg button[data-side="R"].on { background: var(--right); }
-        .seg button:disabled { cursor: default; }
-        .side-pick .seg button { padding: 7px 16px; font-size: 15px; }
-        .btn-plan { height: 52px; border-radius: 6px; border: 0; background: var(--panel-2); font-weight: 600; font-size: 16px; box-shadow: inset 0 0 0 1px var(--line); }
-        @media (hover: hover) { .btn-plan:hover { background: var(--line); } }
-        .chip { display: inline-block; font-family: var(--text); font-size: 13px; font-weight: 600; padding: 1px 8px; border-radius: 4px; color: #0b0d10; vertical-align: 3px; }
-        .chip.L { background: var(--left); }
-        .chip.R { background: var(--right); }
-        td .chip { vertical-align: 1px; }
 
         /* ---- โหมดทดสอบแบบมีขั้นตอน ---- */
         .run {
+            grid-area: run;
             display: grid; grid-template-columns: 150px 1fr auto auto; align-items: center; gap: 22px;
-            margin-top: 16px; padding: 16px 20px; border-radius: 8px; background: var(--panel);
+            padding: 14px 20px; border-radius: 8px; background: var(--panel);
             box-shadow: inset 0 0 0 1px var(--line);
             transition: background-color .2s, box-shadow .2s;
         }
-        .run[hidden] { display: none; }
-        .run-side { font-size: 48px; font-weight: 600; line-height: 1.1; text-align: center; padding: 6px 0; border-radius: 6px; color: #0b0d10; background: var(--left); }
+        .run-side { font-size: 44px; font-weight: 600; line-height: 1.1; text-align: center; padding: 6px 0; border-radius: 6px; color: #0b0d10; background: var(--left); }
         .run-side.R { background: var(--right); }
-        .run-side.none { background: var(--panel-2); color: var(--ink); font-size: 34px; }
+        .run-side.none { background: var(--panel-2); color: var(--ink); font-size: 32px; }
         .run-step { color: var(--mute); font-size: 15px; }
-        .run-msg { font-size: 26px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
-        .run-dots { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+        .run-msg { font-size: 24px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+        .run-dots { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
         .run-dots i { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--left); }
         .run-dots i.R { box-shadow: inset 0 0 0 2px var(--right); }
         .run-dots i.done { background: var(--left); }
         .run-dots i.R.done { background: var(--right); }
         .run-dots i.cur { outline: 2px solid var(--ink); outline-offset: 2px; }
-        .run-count { font-size: 110px; font-weight: 700; line-height: .9; min-width: 120px; text-align: center; }
+        .run-count { font-size: 96px; font-weight: 700; line-height: .9; min-width: 110px; text-align: center; }
         .run-ctl { display: flex; flex-direction: column; gap: 8px; }
         .run.count { box-shadow: inset 0 0 0 2px var(--ink); }
         .run.count .run-count { animation: tick 1s ease-out infinite; }
@@ -244,21 +265,20 @@
         .dlg-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
         .btn-primary { border: 0; border-radius: 6px; padding: 11px 20px; background: var(--ink); color: var(--bg); font-weight: 600; }
 
-        /* ---- LSI ---- */
-        .lsi { margin-top: 18px; background: var(--panel); border-radius: 8px; padding: 16px 18px; }
+        /* ---- แท็บซ้าย/ขวา (LSI) ---- */
         .lsi-head { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
-        .lsi-head h3 { margin: 0; font-size: 16px; font-weight: 600; margin-right: auto; }
+        .lsi-head h3 { display: none; }
         .lsi-opt { display: flex; align-items: center; gap: 8px; color: var(--mute); font-size: 13px; }
         .lsi-opt .seg button { padding: 5px 10px; font-size: 13px; }
         .lsi-empty { color: var(--mute); margin-top: 12px; }
-        .lsi-table { margin-top: 12px; }
-        .lsi-row { display: grid; grid-template-columns: 1.3fr .8fr .8fr 1fr 2fr; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+        .lsi-table { margin-top: 10px; }
+        .lsi-row { display: grid; grid-template-columns: 1.3fr .8fr .8fr 1fr 2fr; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
         .lsi-row:last-child { border-bottom: 0; }
         .lsi-row.h { color: var(--mute); font-size: 13px; padding-top: 0; }
         .lsi-row.h .L { color: var(--left); } .lsi-row.h .R { color: var(--right); }
         .lsi-name small { color: var(--mute); margin-left: 4px; font-size: 12px; }
         .lsi-v { font-family: var(--num); font-size: 22px; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
-        .lsi-pct { font-family: var(--num); font-size: 30px; font-weight: 600; text-align: right; line-height: 1; }
+        .lsi-pct { font-family: var(--num); font-size: 28px; font-weight: 600; text-align: right; line-height: 1; }
         .lsi-pct small { display: block; font-family: var(--text); font-size: 12px; font-weight: 400; color: var(--mute); margin-top: 3px; }
         .lsi-pct.ok { color: var(--onset); } .lsi-pct.mid { color: var(--warn); } .lsi-pct.low { color: #ff6b78; }
         .lsi-bar { position: relative; height: 12px; background: var(--bg); border-radius: 3px; }
@@ -269,84 +289,139 @@
         .lsi-scale { position: relative; height: 16px; font-family: var(--num); font-size: 12px; color: var(--mute); }
         .lsi-scale span { position: absolute; transform: translateX(-50%); }
         .lsi-note { color: var(--mute); font-size: 13px; margin-top: 10px; }
-
-        /* ---- จอกว้าง / iPad แนวนอน: กราฟอยู่ใต้ตัวเลข แผง Peak อยู่ขวา ให้หน้าวัดพอดีจอเดียว ---- */
-        @media (min-width: 1000px) {
-            .stage { display: grid; grid-template-columns: 1fr 360px; grid-template-rows: auto 1fr; column-gap: 28px; margin-top: 18px; }
-            .stage .hero { display: contents; }
-            .live { grid-column: 1; grid-row: 1; min-width: 0; }
-            .side { grid-column: 2; grid-row: 1 / span 2; }
-            .chart-box { grid-column: 1; grid-row: 2; margin-top: 18px; height: clamp(240px, calc(100vh - 400px), 460px); height: clamp(240px, calc(100dvh - 400px), 460px); }
-        }
-        /* ---- iPad แนวตั้ง: ตัวเลขเต็มกว้าง แผงควบคุมแบ่ง 2 คอลัมน์ ---- */
-        @media (min-width: 761px) and (max-width: 999px) {
-            .hero { grid-template-columns: 1fr; gap: 18px; }
-            #forceValue { font-size: clamp(150px, 24vw, 230px); }
-            .side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
-            .mode-badge { grid-column: 1; grid-row: 1; }
-            .peak-display { grid-column: 1; grid-row: 2 / span 3; }
-            .actions { grid-column: 2; grid-row: 2; }
-            .side-pick { grid-column: 2; grid-row: 3; }
-            .btn-plan { grid-column: 2; grid-row: 4; }
-            .chart-box { height: 320px; }
-            .groups { grid-template-columns: 1fr 1fr; }
-        }
-        /* ---- จอสัมผัส: เป้ากดอย่างน้อย ~44 px ---- */
-        @media (pointer: coarse) {
-            .connect { min-height: 44px; }
-            .icon-btn { width: 48px; height: 48px; font-size: 24px; }
-            .seg button, .side-pick .seg button, .lsi-opt .seg button { min-height: 40px; padding: 8px 14px; font-size: 15px; }
-            .btn-exclude { min-height: 44px; padding: 10px 8px; }
-            .btn-light, .btn-primary { min-height: 44px; }
-            th, td { padding-top: 12px; padding-bottom: 12px; }
-            .field select { font-size: 16px; min-height: 40px; }
-            .field input[type=checkbox] { width: 26px; height: 26px; }
-            .guide summary { padding: 16px 2px; }
-        }
-        @media (max-width: 760px) {
-            .app { padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
-            .run { grid-template-columns: auto 1fr auto; gap: 12px; padding: 14px; }
-            .run-side { font-size: 30px; padding: 4px 14px; }
-            .run-side.none { font-size: 22px; }
-            .run-main { grid-column: 1 / -1; grid-row: 2; }
-            .run-msg { font-size: 21px; }
-            .run-count { font-size: 64px; min-width: 0; }
-            .run-ctl { flex-direction: row; justify-content: flex-end; }
-            .run-ctl .btn-light { padding: 9px 14px; }
-            .lsi { padding: 14px 12px; }
+        /* แผงแคบ (มือถือ หรือแท็บด้านข้างบนจอกว้าง): แถบ LSI ลงไปอยู่บรรทัดล่าง */
+        @container (max-width: 560px) {
             .lsi-row { grid-template-columns: 1fr auto auto auto; gap: 4px 12px; }
             .lsi-row .lsi-bar, .lsi-row .lsi-scale { grid-column: 1 / -1; }
             .lsi-row.h > :last-child { display: none; }
             .lsi-v { font-size: 19px; }
             .lsi-pct { font-size: 24px; }
-            header { gap: 10px; }
-            .brand { font-size: 16px; letter-spacing: .1em; }
-            .status { font-size: 12px; line-height: 1.35; }
-            .hero { grid-template-columns: 1fr; gap: 16px; margin-top: 14px; }
-            .detector { font-size: 16px; }
-            .force-display { margin-top: 16px; gap: 10px; }
+        }
+
+        /* ---- iPad แนวตั้ง / จอกลาง ---- */
+        @media (min-width: 600px) {
             #forceValue { font-size: 124px; }
-            .unit { font-size: 36px; }
-            .newton { font-size: 28px; margin-top: 10px; }
-            .side { display: grid; grid-template-columns: 1fr; }
-            .peak-display { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 12px; padding: 12px 16px; }
-            .peak-display .lbl { width: 100%; }
+            .unit { font-size: 40px; }
+            .newton { font-size: 28px; }
+            .peak-display { min-width: 200px; padding: 8px 18px 10px; }
             .peak-display .v { font-size: 56px; }
             .peak-display .n { font-size: 22px; }
-            .actions button { height: 58px; font-size: 17px; }
-            .chart-box { height: 220px; margin-top: 16px; }
-            .results { margin-top: 28px; }
-            .trial-nav { margin-left: 0; width: 100%; justify-content: space-between; }
-            .detail { padding: 14px 12px 16px; }
-            .btn-exclude { margin-left: 0; }
-            .trial-chart { height: 210px; }
-            .groups { grid-template-columns: 1fr; }
-            .tile { padding: 8px 10px; }
-            .tile .value { font-size: 24px; }
-            .tile .value small { font-size: 13px; }
+            .detector { font-size: 16px; }
+            .tabs button { font-size: 16px; }
+        }
+        /* ---- จอกว้าง / iPad แนวนอน / คอม: ตัวเลข + กราฟทางซ้าย แท็บทางขวา ---- */
+        @media (min-width: 960px) and (min-height: 560px) {
+            .app {
+                grid-template-columns: minmax(0, 1fr) clamp(360px, 34vw, 480px); column-gap: 20px;
+                grid-template-areas: "head head" "run run" "meter dock" "ctl dock" "chart dock";
+                grid-template-rows: auto auto auto auto minmax(0, 1fr);
+                padding-top: max(10px, env(safe-area-inset-top)); padding-bottom: max(16px, env(safe-area-inset-bottom));
+                padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right));
+            }
+            .app > .chart-box { margin-bottom: 0; }
+            #forceValue { font-size: clamp(100px, 10vw, 170px); }
+            .unit { font-size: 46px; }
+            .newton { font-size: 30px; margin-top: 10px; }
+            .peak-display { min-width: 230px; }
+            .peak-display .v { font-size: 64px; }
+            .detector { font-size: 17px; padding: 7px 16px 7px 14px; }
+            .controls > button { height: 52px; }
+        }
+        /* ---- มือถือ ---- */
+        @media (max-width: 599px) {
+            .app { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+            .app > * { margin-bottom: 8px; }
+            .app { grid-template-rows: auto auto auto auto minmax(170px, 1fr) minmax(190px, 1fr); }
+            /* ระหว่างทดสอบแบบมีขั้นตอน: แถบคำสั่งแทนป้ายสถานะ และให้กราฟสดได้พื้นที่มากกว่าแท็บ */
+            .app.running { grid-template-rows: auto auto auto auto minmax(170px, 1.6fr) minmax(130px, 1fr); }
+            .app.running .detector { display: none; }
+            #forceValue { font-size: 76px; }
+            .peak-display .v { font-size: 36px; }
+            .chart-bar { flex-wrap: nowrap; }
+            .icon-btn { width: 40px; height: 40px; }
+            .trial-head { gap: 6px 8px; }
+            header { gap: 10px; min-height: 40px; }
+            .brand { font-size: 15px; letter-spacing: .1em; }
+            .status { font-size: 12px; }
+            .connect { padding: 8px 12px; }
+            .detector { font-size: 14px; padding: 5px 12px 5px 10px; }
+            .controls { gap: 6px; }
+            .controls > button { height: 46px; padding: 0 12px; font-size: 15px; }
+            .lg { display: none; }
+            .sm { display: inline; }
+            .side-pick .seg button { padding: 9px 0; min-width: 34px; font-weight: 600; }
+            .btn-plan { flex: 0 1 auto !important; min-width: 0; padding: 0 10px !important; overflow: hidden; }
+            .group-title .hint { display: none; }
+            .chart-bar { padding: 6px 6px 0; }
+            .chart-bar .seg button { padding: 6px 10px; }
+            .legend { display: none; }
+            .tabs { order: 2; border-bottom: 0; border-top: 1px solid var(--line); }
+            .tabs button.on { box-shadow: inset 0 3px 0 var(--peak); }
+            .panel { padding: 10px 12px 12px; }
+            .trial-tag { min-width: 66px; font-size: 22px; }
+            .trial-tag small { margin-right: 3px; }
+            #trialSide button { min-width: 34px; padding-left: 0; padding-right: 0; font-weight: 600; }
+            .btn-exclude { padding-left: 2px; padding-right: 2px; }
+            .tile .value { font-size: 22px; }
+            .run { grid-template-columns: auto 1fr auto; gap: 6px 12px; padding: 10px 12px; }
+            .run-side { font-size: 26px; padding: 2px 12px; }
+            .run-side.none { font-size: 20px; }
+            .run-main { grid-column: 1 / -1; grid-row: 2; }
+            .run-step { font-size: 13px; }
+            .run-msg { font-size: 19px; }
+            .run-dots { margin-top: 6px; }
+            .run-count { font-size: 52px; min-width: 0; }
+            .run-ctl { flex-direction: row; justify-content: flex-end; }
+            .run-ctl .btn-light { padding: 9px 14px; }
             table { font-size: 16px; }
             th, td { padding: 8px 10px; }
             .row button { flex: 1; }
+        }
+        /* ---- จอเตี้ย (มือถือแนวนอน): กลับไปเลื่อนทั้งหน้า กราฟสูงคงที่ ---- */
+        @media (max-height: 559px) {
+            .app { height: auto; grid-template-rows: auto; }
+            .chart-box { height: 300px; }
+            .panel { overflow: visible; }
+        }
+        /* มือถือแนวนอน: ตัวเลขซ้าย กราฟขวาเต็มความสูงจอ แท็บอยู่ใต้ลงไป */
+        @media (max-height: 559px) and (orientation: landscape) and (min-width: 600px) {
+            .app {
+                grid-template-columns: 250px minmax(0, 1fr); column-gap: 12px;
+                grid-template-areas: "head head" "run run" "meter chart" "ctl chart" "dock dock";
+                grid-template-rows: auto auto auto 1fr auto;
+            }
+            header { min-height: 40px; }
+            .chart-box { height: calc(100vh - 66px); height: calc(100dvh - 66px); min-height: 220px; }
+            .app > .controls, .app > .chart-box { margin-bottom: 0; }
+            .meter { grid-template-areas: "det badge" "live live" "peak peak"; align-items: start; row-gap: 4px; }
+            .detector { font-size: 13px; padding: 4px 10px 4px 8px; }
+            #forceValue { font-size: 64px; }
+            .unit { font-size: 24px; }
+            .newton { font-size: 18px; margin-top: 4px; }
+            .peak-display { min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 10px; padding: 2px 12px 4px; }
+            .peak-display .lbl { width: 100%; }
+            .peak-display .v { font-size: 32px; }
+            .peak-display .n { font-size: 16px; }
+            .controls { flex-wrap: wrap; align-self: end; }
+            .controls > button { height: 40px; flex: 1 1 auto; font-size: 15px; padding: 0 10px; }
+            .btn-plan { margin-left: 0; }
+            .lg { display: none; }
+            .sm { display: inline; }
+            .side-pick { flex: 1 1 100%; order: 5; }
+            .side-pick .seg { flex: 1; }
+            .side-pick .seg button { flex: 1; min-height: 34px; padding: 5px 4px; }
+            .dock { margin-top: 10px; }
+        }
+        /* ---- จอสัมผัส: เป้ากดอย่างน้อย ~44 px ---- */
+        @media (pointer: coarse) {
+            .connect { min-height: 44px; }
+            .seg button, .lsi-opt .seg button { min-height: 40px; padding-top: 8px; padding-bottom: 8px; font-size: 15px; }
+            .btn-exclude { min-height: 44px; }
+            .btn-light, .btn-primary { min-height: 44px; }
+            th, td { padding-top: 12px; padding-bottom: 12px; }
+            .field select { font-size: 16px; min-height: 40px; }
+            .field input[type=checkbox] { width: 26px; height: 26px; }
+            .guide summary { padding: 15px 2px; }
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before { animation: none !important; transition: none !important; }
@@ -375,141 +450,152 @@
         </div>
     </section>
 
-    <div class="stage">
-    <section class="hero">
+    <section class="meter">
+        <div id="detector" class="detector">รอข้อมูลจากเครื่อง</div>
+        <span id="modeBadge" class="mode-badge">STANDBY</span>
         <div class="live">
-            <div id="detector" class="detector">รอข้อมูลจากเครื่อง</div>
             <div class="force-display num">
                 <span id="forceValue">0.0</span><span id="unitLabel" class="unit">kg</span>
             </div>
             <div class="newton">= <b id="forceN">0.0</b> N</div>
         </div>
-        <div class="side">
-            <span id="modeBadge" class="mode-badge">STANDBY</span>
-            <div class="peak-display">
-                <div class="lbl">Peak</div>
-                <div class="v"><span id="peakValue">0.0</span> <small id="peakUnit">kg</small></div>
-                <div class="n"><span id="peakN">0.0</span> N</div>
-            </div>
-            <div class="actions">
-                <button id="tareBtn" class="btn-tare">Tare ตั้งศูนย์</button>
-                <button id="resetPeakBtn" class="btn-reset">Reset Peak</button>
-            </div>
-            <div class="side-pick">
-                <span>ข้างที่วัด</span>
-                <div id="sidePick" class="seg" role="group" aria-label="ข้างที่วัด">
-                    <button data-side="" class="on">ไม่ระบุ</button>
-                    <button data-side="L">ซ้าย</button>
-                    <button data-side="R">ขวา</button>
-                </div>
-            </div>
-            <button id="planBtn" class="btn-plan">ทดสอบแบบมีขั้นตอน</button>
+        <div class="peak-display">
+            <div class="lbl">Peak</div>
+            <div class="v"><span id="peakValue">0.0</span> <small id="peakUnit">kg</small></div>
+            <div class="n"><span id="peakN">0.0</span> N</div>
         </div>
     </section>
 
-    <div class="chart-box"><canvas id="chart" aria-label="กราฟแรงย้อนหลัง 10 วินาที"></canvas></div>
-    </div>
+    <section class="controls">
+        <button id="tareBtn" class="btn-tare">Tare<span class="xl"> ตั้งศูนย์</span></button>
+        <button id="resetPeakBtn" class="btn-reset">Reset<span class="lg"> Peak</span></button>
+        <div class="side-pick">
+            <span class="xl">ข้างที่วัด</span>
+            <div id="sidePick" class="seg" role="group" aria-label="ข้างที่วัด">
+                <button data-side="" class="on" aria-label="ไม่ระบุ"><span class="lg">ไม่ระบุ</span><span class="sm">–</span></button>
+                <button data-side="L" aria-label="ซ้าย"><span class="lg">ซ้าย</span><span class="sm">L</span></button>
+                <button data-side="R" aria-label="ขวา"><span class="lg">ขวา</span><span class="sm">R</span></button>
+            </div>
+        </div>
+        <button id="planBtn" class="btn-plan" aria-label="ทดสอบแบบมีขั้นตอน">▶ ทดสอบ<span class="xl">แบบมีขั้นตอน</span></button>
+    </section>
 
-    <section class="results">
-        <div class="sec-head">
-            <h2>ผลการทดสอบ</h2>
-            <div class="trial-nav">
-                <button id="prevTrial" class="icon-btn" aria-label="ครั้งก่อนหน้า" disabled>‹</button>
-                <div id="trialTag" class="trial-tag">–</div>
-                <button id="nextTrial" class="icon-btn" aria-label="ครั้งถัดไป" disabled>›</button>
+    <section id="chartBox" class="chart-box">
+        <div class="chart-bar">
+            <div id="chartView" class="seg" role="group" aria-label="กราฟที่แสดง">
+                <button data-view="live" class="on">สด<span class="lg"> 10 วิ</span></button>
+                <button data-view="trial" id="viewTrialBtn" disabled>ครั้งที่ –</button>
+            </div>
+            <div id="rangeSeg" class="seg" role="group" aria-label="ช่วงของกราฟ" hidden>
+                <button data-range="all" class="on">ทั้งครั้ง</button>
+                <button data-range="300">300 ms<span class="lg"> แรก</span></button>
+            </div>
+            <div id="trialLegend" class="legend" hidden>
+                <span><i style="color:var(--onset)"></i>onset</span>
+                <span><i class="dot" style="background:var(--peak)"></i>peak</span>
+                <span><i style="color:var(--mute)"></i>80% peak</span>
+            </div>
+        </div>
+        <div class="plot">
+            <canvas id="chart" aria-label="กราฟแรงย้อนหลัง 10 วินาที"></canvas>
+            <canvas id="trialChart" aria-label="กราฟแรงของครั้งที่เลือก" hidden></canvas>
+            <div id="trialEmpty" class="empty">ยังไม่มีผล ออกแรงครั้งแรกแล้วผลจะขึ้นที่นี่</div>
+        </div>
+    </section>
+
+    <section class="dock">
+        <nav class="tabs" role="tablist">
+            <button role="tab" data-tab="result" class="on" aria-selected="true">ผล</button>
+            <button role="tab" data-tab="lsi" aria-selected="false">ซ้าย/ขวา</button>
+            <button role="tab" data-tab="history" aria-selected="false">ประวัติ</button>
+            <button role="tab" data-tab="guide" aria-selected="false">คู่มือ</button>
+        </nav>
+
+        <div id="tab-result" class="panel" role="tabpanel">
+            <div id="detail" class="detail">
+                <div class="trial-head">
+                    <div class="trial-nav">
+                        <button id="prevTrial" class="icon-btn" aria-label="ครั้งก่อนหน้า" disabled>‹</button>
+                        <div id="trialTag" class="trial-tag">–</div>
+                        <button id="nextTrial" class="icon-btn" aria-label="ครั้งถัดไป" disabled>›</button>
+                    </div>
+                    <div id="trialSide" class="seg" role="group" aria-label="ข้างของครั้งนี้" hidden>
+                        <button data-side="" aria-label="ไม่ระบุ">–</button>
+                        <button data-side="L" aria-label="ซ้าย"><span class="lg">ซ้าย</span><span class="sm">L</span></button>
+                        <button data-side="R" aria-label="ขวา"><span class="lg">ขวา</span><span class="sm">R</span></button>
+                    </div>
+                    <button id="excludeBtn" class="btn-exclude" hidden>ไม่นับครั้งนี้</button>
+                </div>
+                <div id="excludedNote" class="excluded-note"></div>
+
+                <div class="groups">
+                    <div>
+                        <div class="group-title">แรงสูงสุดและเวลา</div>
+                        <div class="tiles">
+                            <div class="tile key" title="แรงสูงสุดลบแรงพัก (baseline)"><div class="label">Peak Force</div><div class="value" id="rPeak">–</div></div>
+                            <div class="tile" title="เวลาจาก onset ถึง 80% ของแรงสูงสุด เชื่อถือได้มากกว่า TTP"><div class="label">Time to 80% Peak</div><div class="value" id="rT80">–</div></div>
+                            <div class="tile" title="เวลาจาก onset ถึงแรงสูงสุด แปรผันสูง ใช้ประกอบเท่านั้น"><div class="label">Time to Peak (TTP)</div><div class="value" id="rTtp">–</div></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="group-title">RFD ช่วงต้น (0–150 ms)<span class="hint">ระบบประสาทสั่งการ</span></div>
+                        <div class="tiles">
+                            <div class="tile"><div class="label">RFD 0–50 ms</div><div class="value" id="rRfd50">–</div></div>
+                            <div class="tile key"><div class="label">RFD 0–100 ms</div><div class="value" id="rRfd100">–</div></div>
+                            <div class="tile"><div class="label">RFD 0–150 ms</div><div class="value" id="rRfd150">–</div></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="group-title">RFD ช่วงปลาย (&gt;150 ms) และภาพรวม<span class="hint">ประสาท + ความแข็งแรงสูงสุด</span></div>
+                        <div class="tiles">
+                            <div class="tile key"><div class="label">RFD 0–200 ms</div><div class="value" id="rRfd200">–</div></div>
+                            <div class="tile"><div class="label">Peak RFD</div><div class="value" id="rPeakRfd">–</div></div>
+                            <div class="tile"><div class="label">RFD 20–80%</div><div class="value" id="rRfd2080">–</div></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="group-title">แรง ณ เวลาที่กำหนด<span class="hint">แรงสุทธิหลัง onset</span></div>
+                        <div class="tiles">
+                            <div class="tile"><div class="label">Force ＠ 50 ms</div><div class="value" id="rF50">–</div></div>
+                            <div class="tile"><div class="label">Force ＠ 100 ms</div><div class="value" id="rF100">–</div></div>
+                            <div class="tile"><div class="label">Force ＠ 150 ms</div><div class="value" id="rF150">–</div></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="group-title">Impulse<span class="hint">พื้นที่ใต้กราฟแรงสุทธิ</span></div>
+                        <div class="tiles" style="grid-template-columns: repeat(2, 1fr)">
+                            <div class="tile"><div class="label">Impulse 0–100 ms</div><div class="value" id="rImp100">–</div></div>
+                            <div class="tile"><div class="label">Impulse 0–200 ms</div><div class="value" id="rImp200">–</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="fsNote" class="fs-note"></div>
             </div>
         </div>
 
-        <div id="detail" class="detail">
-            <div class="detail-bar">
-                <div class="seg" role="group" aria-label="ช่วงของกราฟ">
-                    <button data-range="all" class="on">ทั้งครั้ง</button>
-                    <button data-range="300">300 ms แรก</button>
-                </div>
-                <div class="legend">
-                    <span><i style="color:var(--onset)"></i>onset</span>
-                    <span><i class="dot" style="background:var(--peak)"></i>peak</span>
-                    <span><i style="color:var(--mute)"></i>80% peak</span>
-                </div>
-                <div id="trialSide" class="seg" role="group" aria-label="ข้างของครั้งนี้" hidden>
-                    <button data-side="">–</button>
-                    <button data-side="L">ซ้าย</button>
-                    <button data-side="R">ขวา</button>
-                </div>
-                <button id="excludeBtn" class="btn-exclude" hidden>ไม่นับครั้งนี้</button>
+        <div id="tab-lsi" class="panel" role="tabpanel" hidden>
+            <div id="lsi" class="lsi">
+                    <div class="lsi-head">
+                        <h3>เทียบซ้าย/ขวา (LSI)</h3>
+                        <div class="lsi-opt">ข้างที่บาดเจ็บ
+                            <div id="lsiInvolved" class="seg" role="group" aria-label="ข้างที่บาดเจ็บ">
+                                <button data-side="" class="on">ไม่ระบุ</button>
+                                <button data-side="L">ซ้าย</button>
+                                <button data-side="R">ขวา</button>
+                            </div>
+                        </div>
+                        <div class="lsi-opt">ใช้ค่า
+                            <div id="lsiAgg" class="seg" role="group" aria-label="วิธีรวมค่า">
+                                <button data-agg="best" class="on">ดีที่สุด</button>
+                                <button data-agg="mean">เฉลี่ย</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="lsiBody"></div>
             </div>
-            <div class="trial-chart">
-                <canvas id="trialChart" aria-label="กราฟแรงของครั้งที่เลือก"></canvas>
-                <div id="trialEmpty" class="empty">ยังไม่มีผล ออกแรงครั้งแรกแล้วผลจะขึ้นที่นี่</div>
-            </div>
-            <div id="excludedNote" class="excluded-note"></div>
-
-            <div class="groups">
-                <div>
-                    <div class="group-title">แรงสูงสุดและเวลา</div>
-                    <div class="tiles">
-                        <div class="tile key" title="แรงสูงสุดลบแรงพัก (baseline)"><div class="label">Peak Force</div><div class="value" id="rPeak">–</div></div>
-                        <div class="tile" title="เวลาจาก onset ถึง 80% ของแรงสูงสุด เชื่อถือได้มากกว่า TTP"><div class="label">Time to 80% Peak</div><div class="value" id="rT80">–</div></div>
-                        <div class="tile" title="เวลาจาก onset ถึงแรงสูงสุด แปรผันสูง ใช้ประกอบเท่านั้น"><div class="label">Time to Peak (TTP)</div><div class="value" id="rTtp">–</div></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="group-title">RFD ช่วงต้น (0–150 ms)<span class="hint">ระบบประสาทสั่งการ</span></div>
-                    <div class="tiles">
-                        <div class="tile"><div class="label">RFD 0–50 ms</div><div class="value" id="rRfd50">–</div></div>
-                        <div class="tile key"><div class="label">RFD 0–100 ms</div><div class="value" id="rRfd100">–</div></div>
-                        <div class="tile"><div class="label">RFD 0–150 ms</div><div class="value" id="rRfd150">–</div></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="group-title">RFD ช่วงปลาย (&gt;150 ms) และภาพรวม<span class="hint">ประสาท + ความแข็งแรงสูงสุด</span></div>
-                    <div class="tiles">
-                        <div class="tile key"><div class="label">RFD 0–200 ms</div><div class="value" id="rRfd200">–</div></div>
-                        <div class="tile"><div class="label">Peak RFD</div><div class="value" id="rPeakRfd">–</div></div>
-                        <div class="tile"><div class="label">RFD 20–80%</div><div class="value" id="rRfd2080">–</div></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="group-title">แรง ณ เวลาที่กำหนด<span class="hint">แรงสุทธิหลัง onset</span></div>
-                    <div class="tiles">
-                        <div class="tile"><div class="label">Force ＠ 50 ms</div><div class="value" id="rF50">–</div></div>
-                        <div class="tile"><div class="label">Force ＠ 100 ms</div><div class="value" id="rF100">–</div></div>
-                        <div class="tile"><div class="label">Force ＠ 150 ms</div><div class="value" id="rF150">–</div></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="group-title">Impulse<span class="hint">พื้นที่ใต้กราฟแรงสุทธิ</span></div>
-                    <div class="tiles" style="grid-template-columns: repeat(2, 1fr)">
-                        <div class="tile"><div class="label">Impulse 0–100 ms</div><div class="value" id="rImp100">–</div></div>
-                        <div class="tile"><div class="label">Impulse 0–200 ms</div><div class="value" id="rImp200">–</div></div>
-                    </div>
-                </div>
-            </div>
-            <div id="fsNote" class="fs-note"></div>
         </div>
 
-        <div id="lsi" class="lsi">
-            <div class="lsi-head">
-                <h3>เทียบซ้าย/ขวา (LSI)</h3>
-                <div class="lsi-opt">ข้างที่บาดเจ็บ
-                    <div id="lsiInvolved" class="seg" role="group" aria-label="ข้างที่บาดเจ็บ">
-                        <button data-side="" class="on">ไม่ระบุ</button>
-                        <button data-side="L">ซ้าย</button>
-                        <button data-side="R">ขวา</button>
-                    </div>
-                </div>
-                <div class="lsi-opt">ใช้ค่า
-                    <div id="lsiAgg" class="seg" role="group" aria-label="วิธีรวมค่า">
-                        <button data-agg="best" class="on">ดีที่สุด</button>
-                        <button data-agg="mean">เฉลี่ย</button>
-                    </div>
-                </div>
-            </div>
-            <div id="lsiBody"></div>
-        </div>
-
-        <div class="history">
-            <h3>ประวัติการทดสอบ</h3>
+        <div id="tab-history" class="panel" role="tabpanel" hidden>
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -523,103 +609,109 @@
                 <button id="clearTrialsBtn" class="btn-light btn-danger">ล้างผลทั้งหมด</button>
             </div>
         </div>
+
+        <div id="tab-guide" class="panel" role="tabpanel" hidden>
+            <div class="guide">
+            <details open>
+                <summary>วิธีทดสอบให้ได้ค่า RFD ที่เชื่อถือได้</summary>
+                <div class="body">
+                    <ol>
+                        <li><b>Pretension 2–3 วินาที:</b> ออกแรงเบา ๆ ค้างไว้ให้สายหรืออุปกรณ์ตึงก่อนเริ่ม เพื่อไม่ให้ช่วงที่อุปกรณ์หย่อนถูกนับเป็นการออกแรง ระบบใช้แรงช่วงนี้เป็น baseline และวัดจากจุดที่แรงเพิ่มขึ้นจากระดับนี้</li>
+                        <li><b>รอข้อความ "พร้อม ออกแรงได้เลย"</b> แล้วออกแรงให้<b>เร็วและแรงที่สุด</b> ค้างไว้ 3–5 วินาที จากนั้นคลายแรง</li>
+                        <li><b>ทำให้เหมือนกันทุกครั้ง:</b> ใช้คำสั่งเดิม มุมข้อต่อเดิม ท่าเดิม และสภาพร่างกายเดียวกัน (ไม่ล้า หรือล้าเท่ากัน) เพราะค่า RFD ไวต่อวิธีทดสอบมาก</li>
+                        <li><b>ทำ 3 ครั้งขึ้นไป</b> พักระหว่างครั้ง แล้วดูค่าที่ดีที่สุดหรือค่าเฉลี่ย กดแถวในตารางประวัติเพื่อดูกราฟของแต่ละครั้ง ครั้งที่ทำพลาดกด "ไม่นับครั้งนี้" ได้</li>
+                    </ol>
+                </div>
+            </details>
+
+            <details>
+                <summary>RFD (Rate of Force Development) คืออะไร</summary>
+                <div class="body">
+                    <p>อัตราการเพิ่มของแรงต่อเวลา (N/s) บอกว่า<b>สร้างแรงได้เร็วแค่ไหน</b> ต่างจาก Peak Force ที่บอกว่า<b>แรงได้มากแค่ไหน</b> สองคนอาจมีแรงสูงสุดเท่ากัน แต่คนที่ไปถึงแรงนั้นเร็วกว่ามี RFD ดีกว่า ซึ่งสำคัญกับงานที่ต้องออกแรงเร็ว เช่น ทรงตัวเมื่อเกือบล้ม ลงบันได กระโดด หรือวิ่ง</p>
+                    <p>การฟื้นฟูที่แรงสูงสุดกลับมาแล้ว แต่ RFD ยังไม่กลับมา ถือว่ายังฟื้นตัวไม่สมบูรณ์ ผู้ป่วยหลังผ่าตัดเอ็นไขว้หน้า (ACL) ที่ผ่านเกณฑ์ความแข็งแรงแล้วมักยังมี RFD ต่ำหรือซ้ายขวาไม่เท่ากัน</p>
+                </div>
+            </details>
+
+            <details>
+                <summary>RFD ช่วงต้น vs ช่วงปลาย</summary>
+                <div class="body">
+                    <p><b>ช่วงต้น (0–150 ms):</b> สะท้อนการสั่งงานของระบบประสาทเป็นหลัก คือสั่งกล้ามเนื้อได้เร็วและเรียกใช้หน่วยกล้ามเนื้อได้ไวแค่ไหน ไวต่อความบกพร่องหลังบาดเจ็บ</p>
+                    <p><b>ช่วงปลาย (&gt;150 ms):</b> ขึ้นกับทั้งระบบประสาทและความแข็งแรงสูงสุดของกล้ามเนื้อ ยิ่งช่วงเวลายาว ยิ่งสัมพันธ์กับ Peak Force มากขึ้น</p>
+                    <p>การดูทั้งสองช่วงช่วยแยกได้ว่าปัญหาอยู่ที่การสั่งงานของระบบประสาท หรือที่ตัวกล้ามเนื้อ</p>
+                </div>
+            </details>
+
+            <details>
+                <summary>นิยามค่าที่คำนวณทั้งหมด</summary>
+                <div class="body">
+                    <dl>
+                        <dt>การกรองสัญญาณ (Low-pass filter)</dt>
+                        <dd>ก่อนคำนวณทุกค่าด้านล่าง ข้อมูลจะถูกกรองด้วย Butterworth low-pass 50 Hz แบบ zero-lag (กรองไปและกลับ) เพื่อตัดสัญญาณรบกวนความถี่สูงโดยเส้นแรงไม่เลื่อนเวลา การเคลื่อนไหวของกล้ามเนื้อจริงอยู่ต่ำกว่า 50 Hz จึงไม่สูญเสียข้อมูล ส่วนกราฟ ตัวเลขสด และ Peak บนหน้าจอยังแสดงข้อมูลดิบ</dd>
+                        <dt>Onset (จุดเริ่มออกแรง)</dt>
+                        <dd>จุดสุดท้ายก่อนแรงเกิน baseline + max(3 × SD ของแรงพัก, 2 N) แสดงเป็นเส้นประสีเขียวบนกราฟ ทุกค่าด้านล่างนับเวลาจากจุดนี้</dd>
+                        <dt>Peak Force (N)</dt>
+                        <dd>แรงสูงสุดลบด้วยแรงพัก (baseline) แสดงเป็นจุดสีส้มบนกราฟ</dd>
+                        <dt>Time to 80% Peak (ms)</dt>
+                        <dd>เวลาจาก onset จนแรงถึง 80% ของแรงสูงสุด เชื่อถือได้มากกว่า TTP สำหรับดูความเร็วในการสร้างแรง แต่อาจไม่สะท้อนความสามารถช่วงท้ายทั้งหมด</dd>
+                        <dt>Time to Peak, TTP (ms)</dt>
+                        <dd>เวลาจาก onset ถึงแรงสูงสุด เข้าใจง่าย แต่<b>แปรผันสูง</b> และขึ้นกับวิธีออกแรง จึงไม่ควรใช้ตัดสินใจเพียงค่าเดียว</dd>
+                        <dt>RFD 0–X ms (N/s)</dt>
+                        <dd>(แรง ณ X ms − แรง ณ onset) ÷ X เป็นวิธีที่มีความน่าเชื่อถือสูงในงานวิจัย โดยเฉพาะช่วง 0–100 และ 0–200 ms ในกราฟรายครั้ง ช่วง 0–50/100/150/200 ms แสดงเป็นแถบสีอ่อนไล่ระดับ</dd>
+                        <dt>Peak RFD (N/s)</dt>
+                        <dd>ความชันสูงสุดของกราฟแรง คำนวณเป็นช่วงละ 20 ms ระหว่าง onset ถึงแรงสูงสุด ไวต่อสัญญาณรบกวนมากกว่าค่าอื่น</dd>
+                        <dt>RFD 20–80% (N/s)</dt>
+                        <dd>ความชันระหว่างจุดที่แรงถึง 20% และ 80% ของแรงสูงสุด เพี้ยนน้อยเมื่อ onset คลาดเคลื่อน</dd>
+                        <dt>Force ＠ X ms (N)</dt>
+                        <dd>แรงสุทธิที่ทำได้ ณ X ms หลัง onset เปรียบเทียบง่าย แต่ไวต่อ pretension และคำสั่งของผู้ทดสอบ</dd>
+                        <dt>Impulse 0–X ms (N·s)</dt>
+                        <dd>พื้นที่ใต้กราฟแรงสุทธิ (แรง × เวลา) ตั้งแต่ onset ถึง X ms สะท้อนปริมาณแรงที่สะสมในช่วงเวลาสั้น ๆ เกี่ยวข้องกับความสามารถในการเบรกและชะลอความเร็ว แต่สื่อสารยากและแปรผันมากกว่าค่า RFD</dd>
+                    </dl>
+                </div>
+            </details>
+
+            <details>
+                <summary>ความถี่การเก็บข้อมูล (Sampling rate)</summary>
+                <div class="body">
+                    <p>งานวิจัยพบว่า 300–500 Hz เพียงพอสำหรับวัด Peak Force และ RFD ในการทดสอบส่วนใหญ่ และค่า RFD แบบช่วงเวลา (0–100, 0–200 ms) เชื่อถือได้ดีแม้ความถี่ต่างกัน งานวิจัยในห้องแล็บระดับหน่วยกล้ามเนื้อแนะนำ 1,000 Hz</p>
+                    <p>เครื่องนี้ส่งข้อมูลประมาณ 480 Hz (ห่างกันชุดละ ~2 ms) ซึ่งอยู่ในเกณฑ์เพียงพอ ค่าที่วัดได้จริงแสดงใต้ผลการทดสอบ</p>
+                </div>
+            </details>
+
+            <details>
+                <summary>การทดสอบแบบมีขั้นตอนและการเทียบซ้าย/ขวา (LSI)</summary>
+                <div class="body">
+                    <p><b>ทดสอบแบบมีขั้นตอน:</b> กด "ทดสอบแบบมีขั้นตอน" แล้วเลือกข้าง ลำดับ จำนวนครั้ง และเวลาพัก แอปจะบอกให้ออกแรงเบา ๆ ให้สายตึง รอให้แรงนิ่ง นับถอยหลัง 3-2-1 พร้อมเสียง แล้วส่งสัญญาณ "ออกแรง!" หลังค้างไว้ราว 4 วินาทีจะบอกให้คลายแรง จากนั้นนับเวลาพักและเปลี่ยนข้างให้เอง ครั้งที่ออกแรงก่อนสัญญาณหรือออกแรงระหว่างพักจะถูกตั้งเป็น "ไม่นับ" อัตโนมัติ</p>
+                    <p><b>LSI (Limb Symmetry Index)</b> = ค่าของข้างที่บาดเจ็บ ÷ ค่าของข้างปกติ × 100 ถ้าไม่ระบุข้างที่บาดเจ็บ จะใช้ข้างที่ค่าน้อยกว่า ÷ ข้างที่มากกว่า เลือกได้ว่าจะใช้ค่าที่ดีที่สุดหรือค่าเฉลี่ยของครั้งที่นับในแต่ละข้าง</p>
+                    <p>เกณฑ์ที่ใช้บ่อยก่อนกลับไปเล่นกีฬาหลังผ่าตัด ACL คือ LSI ≥ 90% (แถบสีเขียว) 80–90% เป็นสีเหลือง และต่ำกว่า 80% เป็นสีแดง LSI ของ RFD มักต่ำกว่าของ Peak Force ในผู้ป่วยกลุ่มเดียวกัน จึงควรดูทั้งสองค่า</p>
+                    <p>ข้อควรระวัง: LSI ดูสูงได้ถ้าข้างปกติก็อ่อนแรงลงด้วย (เช่น ไม่ได้ออกกำลังหลังบาดเจ็บ) ควรเทียบกับค่าก่อนบาดเจ็บหรือค่าอ้างอิงของกลุ่มเดียวกันเมื่อมี</p>
+                </div>
+            </details>
+
+            <details>
+                <summary>แหล่งอ้างอิง</summary>
+                <div class="body">
+                    <ul class="refs">
+                        <li>VALD Health (2026). <a href="https://valdhealth.com/news/understanding-rate-of-force-development" target="_blank" rel="noopener">Understanding Rate of Force Development</a>.</li>
+                        <li>Aagaard P. et al. (2002). Increased rate of force development and neural drive of human skeletal muscle following resistance training. <i>J Appl Physiol</i>, 93(4), 1318–1326.</li>
+                        <li>Maffiuletti N.A. et al. (2016). Rate of force development: physiological and methodological considerations. <i>Eur J Appl Physiol</i>, 116(6), 1091–1116.</li>
+                        <li>Haff G.G. et al. (2015). A comparison of methods for determining the rate of force development during isometric midthigh clean pulls. <i>J Strength Cond Res</i>, 29(2), 386–395.</li>
+                        <li>Tillin N.A. et al. (2013). Explosive force production during isometric squats correlates with athletic performance in rugby union players. <i>J Sports Sci</i>, 31(1), 66–76.</li>
+                        <li>Knezevic O.M. et al. (2014). Asymmetries in explosive strength following anterior cruciate ligament reconstruction. <i>The Knee</i>, 21(6), 1039–1045.</li>
+                        <li>Grindem H. et al. (2016). Simple decision rules can reduce reinjury risk by 84% after ACL reconstruction: the Delaware-Oslo ACL cohort study. <i>Br J Sports Med</i>, 50(13), 804–808.</li>
+                        <li>Wellsandt E. et al. (2017). Limb symmetry indexes can overestimate knee function after anterior cruciate ligament injury. <i>J Orthop Sports Phys Ther</i>, 47(5), 334–338.</li>
+                        <li>Renner K.E. et al. (2022). The impact of sampling frequency on ground reaction force variables. <i>J Biomech</i>, 135, 111034.</li>
+                    </ul>
+                </div>
+            </details>
+            </div>
+            <details class="debug">
+                <summary>ข้อมูลดีบัก (Raw / Rate)</summary>
+                <div id="rawDisplay" class="raw-data">Raw: -</div>
+                <div id="rateDisplay" class="raw-data">Rate: -</div>
+            </details>
+        </div>
     </section>
-
-    <section class="guide">
-        <h2>คู่มือและนิยาม</h2>
-
-        <details open>
-            <summary>วิธีทดสอบให้ได้ค่า RFD ที่เชื่อถือได้</summary>
-            <div class="body">
-                <ol>
-                    <li><b>Pretension 2–3 วินาที:</b> ออกแรงเบา ๆ ค้างไว้ให้สายหรืออุปกรณ์ตึงก่อนเริ่ม เพื่อไม่ให้ช่วงที่อุปกรณ์หย่อนถูกนับเป็นการออกแรง ระบบใช้แรงช่วงนี้เป็น baseline และวัดจากจุดที่แรงเพิ่มขึ้นจากระดับนี้</li>
-                    <li><b>รอข้อความ "พร้อม ออกแรงได้เลย"</b> แล้วออกแรงให้<b>เร็วและแรงที่สุด</b> ค้างไว้ 3–5 วินาที จากนั้นคลายแรง</li>
-                    <li><b>ทำให้เหมือนกันทุกครั้ง:</b> ใช้คำสั่งเดิม มุมข้อต่อเดิม ท่าเดิม และสภาพร่างกายเดียวกัน (ไม่ล้า หรือล้าเท่ากัน) เพราะค่า RFD ไวต่อวิธีทดสอบมาก</li>
-                    <li><b>ทำ 3 ครั้งขึ้นไป</b> พักระหว่างครั้ง แล้วดูค่าที่ดีที่สุดหรือค่าเฉลี่ย กดแถวในตารางประวัติเพื่อดูกราฟของแต่ละครั้ง ครั้งที่ทำพลาดกด "ไม่นับครั้งนี้" ได้</li>
-                </ol>
-            </div>
-        </details>
-
-        <details>
-            <summary>RFD (Rate of Force Development) คืออะไร</summary>
-            <div class="body">
-                <p>อัตราการเพิ่มของแรงต่อเวลา (N/s) บอกว่า<b>สร้างแรงได้เร็วแค่ไหน</b> ต่างจาก Peak Force ที่บอกว่า<b>แรงได้มากแค่ไหน</b> สองคนอาจมีแรงสูงสุดเท่ากัน แต่คนที่ไปถึงแรงนั้นเร็วกว่ามี RFD ดีกว่า ซึ่งสำคัญกับงานที่ต้องออกแรงเร็ว เช่น ทรงตัวเมื่อเกือบล้ม ลงบันได กระโดด หรือวิ่ง</p>
-                <p>การฟื้นฟูที่แรงสูงสุดกลับมาแล้ว แต่ RFD ยังไม่กลับมา ถือว่ายังฟื้นตัวไม่สมบูรณ์ ผู้ป่วยหลังผ่าตัดเอ็นไขว้หน้า (ACL) ที่ผ่านเกณฑ์ความแข็งแรงแล้วมักยังมี RFD ต่ำหรือซ้ายขวาไม่เท่ากัน</p>
-            </div>
-        </details>
-
-        <details>
-            <summary>RFD ช่วงต้น vs ช่วงปลาย</summary>
-            <div class="body">
-                <p><b>ช่วงต้น (0–150 ms):</b> สะท้อนการสั่งงานของระบบประสาทเป็นหลัก คือสั่งกล้ามเนื้อได้เร็วและเรียกใช้หน่วยกล้ามเนื้อได้ไวแค่ไหน ไวต่อความบกพร่องหลังบาดเจ็บ</p>
-                <p><b>ช่วงปลาย (&gt;150 ms):</b> ขึ้นกับทั้งระบบประสาทและความแข็งแรงสูงสุดของกล้ามเนื้อ ยิ่งช่วงเวลายาว ยิ่งสัมพันธ์กับ Peak Force มากขึ้น</p>
-                <p>การดูทั้งสองช่วงช่วยแยกได้ว่าปัญหาอยู่ที่การสั่งงานของระบบประสาท หรือที่ตัวกล้ามเนื้อ</p>
-            </div>
-        </details>
-
-        <details>
-            <summary>นิยามค่าที่คำนวณทั้งหมด</summary>
-            <div class="body">
-                <dl>
-                    <dt>การกรองสัญญาณ (Low-pass filter)</dt>
-                    <dd>ก่อนคำนวณทุกค่าด้านล่าง ข้อมูลจะถูกกรองด้วย Butterworth low-pass 50 Hz แบบ zero-lag (กรองไปและกลับ) เพื่อตัดสัญญาณรบกวนความถี่สูงโดยเส้นแรงไม่เลื่อนเวลา การเคลื่อนไหวของกล้ามเนื้อจริงอยู่ต่ำกว่า 50 Hz จึงไม่สูญเสียข้อมูล ส่วนกราฟ ตัวเลขสด และ Peak บนหน้าจอยังแสดงข้อมูลดิบ</dd>
-                    <dt>Onset (จุดเริ่มออกแรง)</dt>
-                    <dd>จุดสุดท้ายก่อนแรงเกิน baseline + max(3 × SD ของแรงพัก, 2 N) แสดงเป็นเส้นประสีเขียวบนกราฟ ทุกค่าด้านล่างนับเวลาจากจุดนี้</dd>
-                    <dt>Peak Force (N)</dt>
-                    <dd>แรงสูงสุดลบด้วยแรงพัก (baseline) แสดงเป็นจุดสีส้มบนกราฟ</dd>
-                    <dt>Time to 80% Peak (ms)</dt>
-                    <dd>เวลาจาก onset จนแรงถึง 80% ของแรงสูงสุด เชื่อถือได้มากกว่า TTP สำหรับดูความเร็วในการสร้างแรง แต่อาจไม่สะท้อนความสามารถช่วงท้ายทั้งหมด</dd>
-                    <dt>Time to Peak, TTP (ms)</dt>
-                    <dd>เวลาจาก onset ถึงแรงสูงสุด เข้าใจง่าย แต่<b>แปรผันสูง</b> และขึ้นกับวิธีออกแรง จึงไม่ควรใช้ตัดสินใจเพียงค่าเดียว</dd>
-                    <dt>RFD 0–X ms (N/s)</dt>
-                    <dd>(แรง ณ X ms − แรง ณ onset) ÷ X เป็นวิธีที่มีความน่าเชื่อถือสูงในงานวิจัย โดยเฉพาะช่วง 0–100 และ 0–200 ms ในกราฟรายครั้ง ช่วง 0–50/100/150/200 ms แสดงเป็นแถบสีอ่อนไล่ระดับ</dd>
-                    <dt>Peak RFD (N/s)</dt>
-                    <dd>ความชันสูงสุดของกราฟแรง คำนวณเป็นช่วงละ 20 ms ระหว่าง onset ถึงแรงสูงสุด ไวต่อสัญญาณรบกวนมากกว่าค่าอื่น</dd>
-                    <dt>RFD 20–80% (N/s)</dt>
-                    <dd>ความชันระหว่างจุดที่แรงถึง 20% และ 80% ของแรงสูงสุด เพี้ยนน้อยเมื่อ onset คลาดเคลื่อน</dd>
-                    <dt>Force ＠ X ms (N)</dt>
-                    <dd>แรงสุทธิที่ทำได้ ณ X ms หลัง onset เปรียบเทียบง่าย แต่ไวต่อ pretension และคำสั่งของผู้ทดสอบ</dd>
-                    <dt>Impulse 0–X ms (N·s)</dt>
-                    <dd>พื้นที่ใต้กราฟแรงสุทธิ (แรง × เวลา) ตั้งแต่ onset ถึง X ms สะท้อนปริมาณแรงที่สะสมในช่วงเวลาสั้น ๆ เกี่ยวข้องกับความสามารถในการเบรกและชะลอความเร็ว แต่สื่อสารยากและแปรผันมากกว่าค่า RFD</dd>
-                </dl>
-            </div>
-        </details>
-
-        <details>
-            <summary>ความถี่การเก็บข้อมูล (Sampling rate)</summary>
-            <div class="body">
-                <p>งานวิจัยพบว่า 300–500 Hz เพียงพอสำหรับวัด Peak Force และ RFD ในการทดสอบส่วนใหญ่ และค่า RFD แบบช่วงเวลา (0–100, 0–200 ms) เชื่อถือได้ดีแม้ความถี่ต่างกัน งานวิจัยในห้องแล็บระดับหน่วยกล้ามเนื้อแนะนำ 1,000 Hz</p>
-                <p>เครื่องนี้ส่งข้อมูลประมาณ 480 Hz (ห่างกันชุดละ ~2 ms) ซึ่งอยู่ในเกณฑ์เพียงพอ ค่าที่วัดได้จริงแสดงใต้ผลการทดสอบ</p>
-            </div>
-        </details>
-
-        <details>
-            <summary>การทดสอบแบบมีขั้นตอนและการเทียบซ้าย/ขวา (LSI)</summary>
-            <div class="body">
-                <p><b>ทดสอบแบบมีขั้นตอน:</b> กด "ทดสอบแบบมีขั้นตอน" แล้วเลือกข้าง ลำดับ จำนวนครั้ง และเวลาพัก แอปจะบอกให้ออกแรงเบา ๆ ให้สายตึง รอให้แรงนิ่ง นับถอยหลัง 3-2-1 พร้อมเสียง แล้วส่งสัญญาณ "ออกแรง!" หลังค้างไว้ราว 4 วินาทีจะบอกให้คลายแรง จากนั้นนับเวลาพักและเปลี่ยนข้างให้เอง ครั้งที่ออกแรงก่อนสัญญาณหรือออกแรงระหว่างพักจะถูกตั้งเป็น "ไม่นับ" อัตโนมัติ</p>
-                <p><b>LSI (Limb Symmetry Index)</b> = ค่าของข้างที่บาดเจ็บ ÷ ค่าของข้างปกติ × 100 ถ้าไม่ระบุข้างที่บาดเจ็บ จะใช้ข้างที่ค่าน้อยกว่า ÷ ข้างที่มากกว่า เลือกได้ว่าจะใช้ค่าที่ดีที่สุดหรือค่าเฉลี่ยของครั้งที่นับในแต่ละข้าง</p>
-                <p>เกณฑ์ที่ใช้บ่อยก่อนกลับไปเล่นกีฬาหลังผ่าตัด ACL คือ LSI ≥ 90% (แถบสีเขียว) 80–90% เป็นสีเหลือง และต่ำกว่า 80% เป็นสีแดง LSI ของ RFD มักต่ำกว่าของ Peak Force ในผู้ป่วยกลุ่มเดียวกัน จึงควรดูทั้งสองค่า</p>
-                <p>ข้อควรระวัง: LSI ดูสูงได้ถ้าข้างปกติก็อ่อนแรงลงด้วย (เช่น ไม่ได้ออกกำลังหลังบาดเจ็บ) ควรเทียบกับค่าก่อนบาดเจ็บหรือค่าอ้างอิงของกลุ่มเดียวกันเมื่อมี</p>
-            </div>
-        </details>
-
-        <details>
-            <summary>แหล่งอ้างอิง</summary>
-            <div class="body">
-                <ul class="refs">
-                    <li>VALD Health (2026). <a href="https://valdhealth.com/news/understanding-rate-of-force-development" target="_blank" rel="noopener">Understanding Rate of Force Development</a>.</li>
-                    <li>Aagaard P. et al. (2002). Increased rate of force development and neural drive of human skeletal muscle following resistance training. <i>J Appl Physiol</i>, 93(4), 1318–1326.</li>
-                    <li>Maffiuletti N.A. et al. (2016). Rate of force development: physiological and methodological considerations. <i>Eur J Appl Physiol</i>, 116(6), 1091–1116.</li>
-                    <li>Haff G.G. et al. (2015). A comparison of methods for determining the rate of force development during isometric midthigh clean pulls. <i>J Strength Cond Res</i>, 29(2), 386–395.</li>
-                    <li>Tillin N.A. et al. (2013). Explosive force production during isometric squats correlates with athletic performance in rugby union players. <i>J Sports Sci</i>, 31(1), 66–76.</li>
-                    <li>Knezevic O.M. et al. (2014). Asymmetries in explosive strength following anterior cruciate ligament reconstruction. <i>The Knee</i>, 21(6), 1039–1045.</li>
-                    <li>Grindem H. et al. (2016). Simple decision rules can reduce reinjury risk by 84% after ACL reconstruction: the Delaware-Oslo ACL cohort study. <i>Br J Sports Med</i>, 50(13), 804–808.</li>
-                    <li>Wellsandt E. et al. (2017). Limb symmetry indexes can overestimate knee function after anterior cruciate ligament injury. <i>J Orthop Sports Phys Ther</i>, 47(5), 334–338.</li>
-                    <li>Renner K.E. et al. (2022). The impact of sampling frequency on ground reaction force variables. <i>J Biomech</i>, 135, 111034.</li>
-                </ul>
-            </div>
-        </details>
-    </section>
+</div>
 
     <dialog id="planDlg">
         <form method="dialog">
@@ -641,13 +733,6 @@
             </div>
         </form>
     </dialog>
-
-    <details class="debug">
-        <summary>ข้อมูลดีบัก (Raw / Rate)</summary>
-        <div id="rawDisplay" class="raw-data">Raw: -</div>
-        <div id="rateDisplay" class="raw-data">Rate: -</div>
-    </details>
-</div>
 
     <script>
         const connectBtn = document.getElementById('connectBtn');
@@ -908,6 +993,7 @@
             detectorState = state + text;
             detectorElem.className = 'detector ' + state;
             detectorElem.textContent = text;
+            if (state === 'active') setChartView('live');   // เริ่มออกแรง: กลับมาดูกราฟสด
         }
 
         // baseline = แรงช่วงพัก 0.2–0.7 วินาทีก่อนเฟรมนี้ (เว้นช่วงใกล้ ๆ ไว้เผื่อเริ่มออกแรงแล้ว)
@@ -1189,7 +1275,7 @@
             trialEmptyElem.hidden = !!r;
             if (r) {
                 setSeg(trialSideElem, 'side', r.side);
-                excludeBtn.textContent = r.excluded ? 'นับครั้งนี้กลับ' : 'ไม่นับครั้งนี้';
+                excludeBtn.innerHTML = r.excluded ? 'นับ<span class="lg">ครั้งนี้</span>กลับ' : 'ไม่นับ<span class="lg">ครั้งนี้</span>';
                 excludedNoteElem.textContent = 'ครั้งนี้ไม่นับ' + (r.note ? ` (${r.note})` : '') + ' ไม่รวมใน LSI และไม่ถูกส่งออกใน CSV';
                 detailElem.classList.toggle('excluded', r.excluded);
                 fillTiles(r);
@@ -1198,13 +1284,57 @@
                 clearTiles();
             }
             trialRowsElem.querySelectorAll('tr[data-no]').forEach((tr) => tr.classList.toggle('sel', r && +tr.dataset.no === r.no));
+            viewTrialBtn.disabled = !r;
+            viewTrialBtn.textContent = r ? `ครั้งที่ ${r.no}` : 'ครั้งที่ –';
             if (isNew) {
                 detailElem.classList.remove('flash');
                 void detailElem.offsetWidth;
                 detailElem.classList.add('flash');
+                if (currentTab !== 'result') tabBtns.forEach((b) => b.classList.toggle('dot', b.dataset.tab === 'result'));
             }
-            drawTrial();
+            setChartView(r ? 'trial' : 'live');
         }
+
+        // ---- กราฟหลัก: กราฟสด หรือกราฟของครั้งที่เลือก ----
+        const appElem = document.querySelector('.app');
+        const chartBoxElem = document.getElementById('chartBox');
+        const chartViewElem = document.getElementById('chartView');
+        const viewTrialBtn = document.getElementById('viewTrialBtn');
+        const rangeSegElem = document.getElementById('rangeSeg');
+        const trialLegendElem = document.getElementById('trialLegend');
+        let chartView = 'live';
+
+        function setChartView(v) {
+            if (v === 'trial' && !selected) v = 'live';
+            chartView = v;
+            setSeg(chartViewElem, 'view', v);
+            const t = v === 'trial';
+            chartBoxElem.classList.toggle('trial', t);
+            canvas.hidden = t;
+            trialCanvas.hidden = !t;
+            rangeSegElem.hidden = !t;
+            trialLegendElem.hidden = !t;
+            if (t) drawTrial();
+        }
+        chartViewElem.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => setChartView(b.dataset.view)));
+
+        // ---- แท็บ ----
+        const TAB_KEY = 'mm-tab';
+        const tabBtns = document.querySelectorAll('.tabs button');
+        let currentTab = 'result';
+        function showTab(id) {
+            currentTab = id;
+            tabBtns.forEach((b) => {
+                const on = b.dataset.tab === id;
+                b.classList.toggle('on', on);
+                b.setAttribute('aria-selected', on);
+                if (on) b.classList.remove('dot');
+            });
+            document.querySelectorAll('.panel').forEach((p) => { p.hidden = p.id !== 'tab-' + id; });
+            try { localStorage.setItem(TAB_KEY, id); } catch (e) { }
+        }
+        tabBtns.forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+        try { const t = localStorage.getItem(TAB_KEY); if (t && document.getElementById('tab-' + t)) showTab(t); } catch (e) { }
 
         prevBtn.addEventListener('click', () => { const i = trials.indexOf(selected); if (i > 0) selectTrial(trials[i - 1]); });
         nextBtn.addEventListener('click', () => { const i = trials.indexOf(selected); if (i < trials.length - 1) selectTrial(trials[i + 1]); });
@@ -1355,6 +1485,7 @@
             run.cued = false;
             run.lastCount = null;
             if (phase === 'prep' && run.i < run.steps.length) setCurrentSide(run.steps[run.i]);
+            if (phase === 'prep') setChartView('live');
             run.msg = msg || '';
             renderRun();
         }
@@ -1381,15 +1512,17 @@
         function startRun() {
             run = { steps: buildSteps(plan), i: 0 };
             runElem.hidden = false;
+            appElem.classList.add('running');
             sidePickElem.querySelectorAll('button').forEach((b) => { b.disabled = true; });
             beep(1, 0.01, 0.0001);   // ปลดล็อกเสียงด้วยการกดของผู้ใช้
             setPhase('prep');
-            runElem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            if (document.documentElement.scrollHeight > innerHeight + 1) runElem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
 
         function stopRun() {
             run = null;
             runElem.hidden = true;
+            appElem.classList.remove('running');
             sidePickElem.querySelectorAll('button').forEach((b) => { b.disabled = false; });
         }
 
@@ -1507,9 +1640,9 @@
         });
         document.getElementById('runStop').addEventListener('click', stopRun);
         runSkipBtn.addEventListener('click', () => { if (run && run.phase === 'rest') setPhase('prep'); });
-        document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+        rangeSegElem.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
             trialRange = b.dataset.range;
-            document.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x === b));
+            setSeg(rangeSegElem, 'range', trialRange);
             drawTrial();
         }));
 
@@ -1787,6 +1920,7 @@
         }
 
         window.addEventListener('resize', drawTrial);
+        if (window.ResizeObserver) new ResizeObserver(() => { if (chartView === 'trial') drawTrial(); }).observe(trialCanvas.parentElement);
         if (document.fonts) document.fonts.ready.then(drawTrial);
         renderTable();
     </script>

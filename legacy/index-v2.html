@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#111418">
+    <title>Muscle Meter Live</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #111418;
+            --panel: #191d23;
+            --panel-2: #20252c;
+            --line: #2a3038;
+            --ink: #f4f5f6;
+            --mute: #8b939e;
+            --faint: #5d6570;
+            --peak: #ff6a1a;
+            --onset: #2bd47d;
+            --rec: #ff3b4e;
+            --trace: #e9edf2;
+            --num: 'Barlow Condensed', 'IBM Plex Sans Thai', system-ui, sans-serif;
+            --text: 'IBM Plex Sans Thai', system-ui, 'Segoe UI', sans-serif;
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font: 15px/1.55 var(--text);
+        }
+        button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+        .force-display, .newton, .peak-display { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px solid var(--peak); outline-offset: 2px; }
+        .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+        .app {
+            max-width: 1400px; margin: 0 auto;
+            padding: max(16px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
+        }
+
+        /* ---- หัว ---- */
+        header { display: flex; align-items: center; gap: 14px; min-height: 44px; }
+        .brand { font-family: var(--num); font-weight: 700; letter-spacing: .14em; font-size: 18px; white-space: nowrap; }
+        .status { margin-left: auto; color: var(--mute); font-size: 14px; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+        .connect {
+            flex: none; border: 0; border-radius: 6px; padding: 9px 16px;
+            background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; white-space: nowrap;
+            transition: background-color .2s, color .2s, transform .1s;
+        }
+        .connect:active { transform: scale(.97); }
+        .connect.on { background: transparent; color: var(--onset); box-shadow: inset 0 0 0 1px var(--onset); cursor: default; }
+        .connect.on::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--onset); margin-right: 8px; vertical-align: 1px; }
+
+        /* ---- ค่าแรงสด ---- */
+        .hero { display: grid; grid-template-columns: 1fr 360px; gap: 28px; margin-top: 18px; }
+        .detector {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 8px 16px 8px 14px; border-radius: 4px;
+            background: var(--panel-2); color: var(--mute);
+            font-weight: 600; font-size: 17px;
+            transition: background-color .25s, color .25s;
+        }
+        .detector::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+        .detector.ready { background: rgba(43, 212, 125, .14); color: var(--onset); }
+        .detector.active { background: var(--rec); color: #fff; }
+        .detector.active::before { animation: blink 1s steps(2) infinite; }
+        @keyframes blink { 50% { opacity: .25; } }
+        .force-display { display: flex; align-items: baseline; gap: 14px; line-height: .82; margin-top: 20px; }
+        #forceValue { font-size: clamp(112px, 18vw, 250px); font-weight: 600; letter-spacing: -.02em; }
+        .unit { font-family: var(--num); font-size: 56px; font-weight: 500; color: var(--mute); }
+        .newton { font-family: var(--num); font-size: 40px; font-weight: 500; color: var(--mute); margin-top: 14px; }
+        .newton b { color: var(--ink); font-weight: 600; }
+
+        .side { display: flex; flex-direction: column; gap: 14px; }
+        .mode-badge {
+            align-self: flex-start;
+            justify-self: start;
+            font-family: var(--num); font-weight: 700; font-size: 18px; letter-spacing: .12em;
+            padding: 3px 14px; border-radius: 4px; color: #fff; background-color: var(--faint);
+            transition: background-color .2s;
+        }
+        .peak-display { background: var(--panel); border-left: 4px solid var(--peak); border-radius: 6px; padding: 14px 18px; flex: 1; }
+        .peak-display .lbl { color: var(--mute); font-size: 15px; }
+        .peak-display .v { font-family: var(--num); font-size: 76px; font-weight: 600; color: var(--peak); line-height: 1; margin-top: 4px; }
+        .peak-display .v small { font-size: 28px; font-weight: 500; color: var(--mute); }
+        .peak-display .n { font-family: var(--num); font-size: 26px; color: var(--mute); }
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .actions button { height: 64px; border-radius: 6px; font-weight: 600; font-size: 18px; border: 0; transition: transform .1s, filter .15s; }
+        .actions button:active { transform: scale(.97); }
+        .btn-tare { background: var(--ink); color: var(--bg); }
+        .btn-reset { background: var(--panel); color: var(--peak); box-shadow: inset 0 0 0 1px var(--peak); }
+        @media (hover: hover) { .actions button:hover { filter: brightness(1.08); } }
+
+        /* ---- กราฟสด ---- */
+        .chart-box { position: relative; height: 280px; margin-top: 22px; background: var(--panel); border-radius: 8px; }
+        .chart-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+        /* ---- ผลการทดสอบ ---- */
+        .results { margin-top: 36px; }
+        .sec-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+        .sec-head h2 { margin: 0; font-size: 22px; font-weight: 600; }
+        .trial-nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+        .icon-btn {
+            width: 40px; height: 40px; border-radius: 6px; border: 0;
+            background: var(--panel-2); font-size: 20px; line-height: 1;
+        }
+        .icon-btn:disabled { opacity: .35; cursor: default; }
+        .trial-tag { font-family: var(--num); font-size: 26px; font-weight: 600; min-width: 112px; text-align: center; }
+        .trial-tag small { font-family: var(--text); font-size: 14px; color: var(--mute); font-weight: 400; margin-right: 6px; }
+
+        .detail { background: var(--panel); border-radius: 8px; padding: 16px 18px 18px; }
+        .detail.flash { animation: flash .7s ease-out; }
+        @keyframes flash { from { box-shadow: 0 0 0 2px var(--peak); } to { box-shadow: 0 0 0 2px transparent; } }
+        .detail-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .seg { display: inline-flex; background: var(--bg); border-radius: 6px; padding: 3px; }
+        .seg button { border: 0; background: none; padding: 6px 12px; border-radius: 4px; font-size: 14px; color: var(--mute); }
+        .seg button.on { background: var(--panel-2); color: var(--ink); }
+        .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--mute); }
+        .legend i { display: inline-block; width: 14px; height: 0; border-top: 2px dashed; vertical-align: 4px; margin-right: 6px; }
+        .legend .dot { width: 9px; height: 9px; border: 0; border-radius: 50%; vertical-align: 0; }
+        .btn-exclude { margin-left: auto; border: 0; background: none; color: var(--mute); font-size: 14px; padding: 6px 4px; text-decoration: underline; text-underline-offset: 3px; }
+        .trial-chart { position: relative; height: 240px; margin-top: 12px; }
+        .trial-chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+        .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--mute); padding: 16px; }
+        .empty[hidden] { display: none; }
+        .excluded-note { display: none; color: var(--peak); font-size: 14px; margin-top: 8px; }
+        .detail.excluded .excluded-note { display: block; }
+        .detail.excluded .groups { opacity: .45; }
+
+        .groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px 22px; margin-top: 18px; }
+        .group-title { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+        .group-title .hint { font-weight: 400; color: var(--mute); font-size: 13px; margin-left: 4px; }
+        .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border-radius: 6px; overflow: hidden; }
+        .tile { background: var(--panel-2); padding: 10px 12px; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 2px; }
+        .tile .label { font-size: 13px; color: var(--mute); line-height: 1.35; }
+        .tile .value { font-family: var(--num); font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 600; line-height: 1.15; white-space: nowrap; }
+        .tile .value small { font-size: 15px; font-weight: 500; color: var(--mute); margin-left: 3px; }
+        .tile.key .value { color: var(--peak); }
+        .fs-note { font-size: 13px; color: var(--mute); margin-top: 14px; }
+
+        .history { margin-top: 18px; }
+        .history h3 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+        .table-wrap { overflow-x: auto; background: var(--panel); border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; font-family: var(--num); font-size: 18px; font-variant-numeric: tabular-nums; }
+        th, td { padding: 9px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+        th { font-family: var(--text); font-size: 13px; font-weight: 500; color: var(--mute); }
+        th:first-child, td:first-child { text-align: left; }
+        tbody tr { cursor: pointer; transition: background-color .15s; }
+        @media (hover: hover) { tbody tr:hover { background: var(--panel-2); } }
+        tbody tr.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--peak); }
+        tbody tr.off td { color: var(--faint); text-decoration: line-through; }
+        tbody tr.new { animation: rowIn .6s ease-out; }
+        @keyframes rowIn { from { background: rgba(255, 106, 26, .25); } }
+        .empty-row td { text-align: center; color: var(--mute); font-family: var(--text); font-size: 14px; cursor: default; }
+        .row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+        .btn-light { border: 0; border-radius: 6px; padding: 11px 18px; background: var(--panel-2); font-weight: 500; }
+        @media (hover: hover) { .btn-light:hover { background: var(--line); } }
+        .btn-danger { color: #ff8a8a; }
+
+        /* ---- คู่มือ ---- */
+        .guide { margin-top: 44px; max-width: 860px; }
+        .guide h2 { font-size: 22px; font-weight: 600; margin: 0 0 12px; }
+        .guide details { border-top: 1px solid var(--line); }
+        .guide details:last-of-type { border-bottom: 1px solid var(--line); }
+        .guide summary { cursor: pointer; padding: 14px 2px; font-weight: 600; font-size: 16px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+        .guide summary::-webkit-details-marker { display: none; }
+        .guide summary::after { content: '+'; color: var(--mute); font-weight: 400; font-size: 20px; line-height: 1; }
+        .guide details[open] summary::after { content: '–'; }
+        .guide .body { padding: 0 2px 16px; color: #c9ced5; line-height: 1.7; }
+        .guide p, .guide ol, .guide dl, .guide ul { margin: 0 0 10px; }
+        .guide ol, .guide ul { padding-left: 22px; }
+        .guide li { margin-bottom: 6px; }
+        .guide b { color: var(--ink); }
+        .guide dt { font-weight: 600; color: var(--ink); margin-top: 12px; }
+        .guide dd { margin: 2px 0 0; }
+        .guide .refs { font-size: 14px; }
+        .guide a { color: var(--peak); }
+
+        /* ---- ดีบัก ---- */
+        .debug { margin-top: 28px; color: var(--faint); font-size: 13px; }
+        .debug summary { cursor: pointer; }
+        .raw-data { font-family: ui-monospace, Consolas, monospace; font-size: 12px; word-break: break-all; margin-top: 6px; }
+
+        /* ---- ซ้าย/ขวา ---- */
+        :root { --left: #5ab8ff; --right: #c792ff; --warn: #f5b942; }
+        .side-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--mute); font-size: 14px; }
+        .seg button[data-side].on { color: #0b0d10; font-weight: 600; }
+        .seg button[data-side=""].on { background: var(--panel-2); color: var(--ink); }
+        .seg button[data-side="L"].on { background: var(--left); }
+        .seg button[data-side="R"].on { background: var(--right); }
+        .seg button:disabled { cursor: default; }
+        .side-pick .seg button { padding: 7px 16px; font-size: 15px; }
+        .btn-plan { height: 52px; border-radius: 6px; border: 0; background: var(--panel-2); font-weight: 600; font-size: 16px; box-shadow: inset 0 0 0 1px var(--line); }
+        @media (hover: hover) { .btn-plan:hover { background: var(--line); } }
+        .chip { display: inline-block; font-family: var(--text); font-size: 13px; font-weight: 600; padding: 1px 8px; border-radius: 4px; color: #0b0d10; vertical-align: 3px; }
+        .chip.L { background: var(--left); }
+        .chip.R { background: var(--right); }
+        td .chip { vertical-align: 1px; }
+
+        /* ---- โหมดทดสอบแบบมีขั้นตอน ---- */
+        .run {
+            display: grid; grid-template-columns: 150px 1fr auto auto; align-items: center; gap: 22px;
+            margin-top: 16px; padding: 16px 20px; border-radius: 8px; background: var(--panel);
+            box-shadow: inset 0 0 0 1px var(--line);
+            transition: background-color .2s, box-shadow .2s;
+        }
+        .run[hidden] { display: none; }
+        .run-side { font-size: 48px; font-weight: 600; line-height: 1.1; text-align: center; padding: 6px 0; border-radius: 6px; color: #0b0d10; background: var(--left); }
+        .run-side.R { background: var(--right); }
+        .run-side.none { background: var(--panel-2); color: var(--ink); font-size: 34px; }
+        .run-step { color: var(--mute); font-size: 15px; }
+        .run-msg { font-size: 26px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+        .run-dots { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+        .run-dots i { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--left); }
+        .run-dots i.R { box-shadow: inset 0 0 0 2px var(--right); }
+        .run-dots i.done { background: var(--left); }
+        .run-dots i.R.done { background: var(--right); }
+        .run-dots i.cur { outline: 2px solid var(--ink); outline-offset: 2px; }
+        .run-count { font-size: 110px; font-weight: 700; line-height: .9; min-width: 120px; text-align: center; }
+        .run-ctl { display: flex; flex-direction: column; gap: 8px; }
+        .run.count { box-shadow: inset 0 0 0 2px var(--ink); }
+        .run.count .run-count { animation: tick 1s ease-out infinite; }
+        @keyframes tick { from { transform: scale(1.15); } to { transform: scale(1); } }
+        .run.go { background: var(--onset); color: #0b0d10; }
+        .run.go .run-step { color: rgba(0, 0, 0, .65); }
+        .run.go .btn-light { background: rgba(0, 0, 0, .15); color: #0b0d10; }
+        .run.release { background: var(--warn); color: #0b0d10; }
+        .run.release .run-step { color: rgba(0, 0, 0, .65); }
+        .run.release .btn-light { background: rgba(0, 0, 0, .15); color: #0b0d10; }
+        .run.bad { box-shadow: inset 0 0 0 2px var(--rec); }
+        .run.bad .run-msg { color: #ff8a8a; }
+        .run.rest .run-count { color: var(--mute); }
+
+        dialog { background: var(--panel); color: var(--ink); border: 0; border-radius: 10px; padding: 22px; width: min(440px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0, 0, 0, .5); }
+        dialog::backdrop { background: rgba(0, 0, 0, .6); }
+        dialog h3 { margin: 0 0 14px; font-size: 20px; }
+        .field { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+        .field label { color: var(--mute); }
+        .field select { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: inherit; min-width: 150px; }
+        .field input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--peak); }
+        .dlg-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+        .btn-primary { border: 0; border-radius: 6px; padding: 11px 20px; background: var(--ink); color: var(--bg); font-weight: 600; }
+
+        /* ---- LSI ---- */
+        .lsi { margin-top: 18px; background: var(--panel); border-radius: 8px; padding: 16px 18px; }
+        .lsi-head { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
+        .lsi-head h3 { margin: 0; font-size: 16px; font-weight: 600; margin-right: auto; }
+        .lsi-opt { display: flex; align-items: center; gap: 8px; color: var(--mute); font-size: 13px; }
+        .lsi-opt .seg button { padding: 5px 10px; font-size: 13px; }
+        .lsi-empty { color: var(--mute); margin-top: 12px; }
+        .lsi-table { margin-top: 12px; }
+        .lsi-row { display: grid; grid-template-columns: 1.3fr .8fr .8fr 1fr 2fr; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+        .lsi-row:last-child { border-bottom: 0; }
+        .lsi-row.h { color: var(--mute); font-size: 13px; padding-top: 0; }
+        .lsi-row.h .L { color: var(--left); } .lsi-row.h .R { color: var(--right); }
+        .lsi-name small { color: var(--mute); margin-left: 4px; font-size: 12px; }
+        .lsi-v { font-family: var(--num); font-size: 22px; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+        .lsi-pct { font-family: var(--num); font-size: 30px; font-weight: 600; text-align: right; line-height: 1; }
+        .lsi-pct small { display: block; font-family: var(--text); font-size: 12px; font-weight: 400; color: var(--mute); margin-top: 3px; }
+        .lsi-pct.ok { color: var(--onset); } .lsi-pct.mid { color: var(--warn); } .lsi-pct.low { color: #ff6b78; }
+        .lsi-bar { position: relative; height: 12px; background: var(--bg); border-radius: 3px; }
+        .lsi-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; transition: width .4s ease-out; }
+        .lsi-bar i.ok { background: var(--onset); } .lsi-bar i.mid { background: var(--warn); } .lsi-bar i.low { background: #ff6b78; }
+        .lsi-bar b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); opacity: .5; }
+        .lsi-bar b.t100 { opacity: .9; }
+        .lsi-scale { position: relative; height: 16px; font-family: var(--num); font-size: 12px; color: var(--mute); }
+        .lsi-scale span { position: absolute; transform: translateX(-50%); }
+        .lsi-note { color: var(--mute); font-size: 13px; margin-top: 10px; }
+
+        /* ---- จอกว้าง / iPad แนวนอน: กราฟอยู่ใต้ตัวเลข แผง Peak อยู่ขวา ให้หน้าวัดพอดีจอเดียว ---- */
+        @media (min-width: 1000px) {
+            .stage { display: grid; grid-template-columns: 1fr 360px; grid-template-rows: auto 1fr; column-gap: 28px; margin-top: 18px; }
+            .stage .hero { display: contents; }
+            .live { grid-column: 1; grid-row: 1; min-width: 0; }
+            .side { grid-column: 2; grid-row: 1 / span 2; }
+            .chart-box { grid-column: 1; grid-row: 2; margin-top: 18px; height: clamp(240px, calc(100vh - 400px), 460px); height: clamp(240px, calc(100dvh - 400px), 460px); }
+        }
+        /* ---- iPad แนวตั้ง: ตัวเลขเต็มกว้าง แผงควบคุมแบ่ง 2 คอลัมน์ ---- */
+        @media (min-width: 761px) and (max-width: 999px) {
+            .hero { grid-template-columns: 1fr; gap: 18px; }
+            #forceValue { font-size: clamp(150px, 24vw, 230px); }
+            .side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+            .mode-badge { grid-column: 1; grid-row: 1; }
+            .peak-display { grid-column: 1; grid-row: 2 / span 3; }
+            .actions { grid-column: 2; grid-row: 2; }
+            .side-pick { grid-column: 2; grid-row: 3; }
+            .btn-plan { grid-column: 2; grid-row: 4; }
+            .chart-box { height: 320px; }
+            .groups { grid-template-columns: 1fr 1fr; }
+        }
+        /* ---- จอสัมผัส: เป้ากดอย่างน้อย ~44 px ---- */
+        @media (pointer: coarse) {
+            .connect { min-height: 44px; }
+            .icon-btn { width: 48px; height: 48px; font-size: 24px; }
+            .seg button, .side-pick .seg button, .lsi-opt .seg button { min-height: 40px; padding: 8px 14px; font-size: 15px; }
+            .btn-exclude { min-height: 44px; padding: 10px 8px; }
+            .btn-light, .btn-primary { min-height: 44px; }
+            th, td { padding-top: 12px; padding-bottom: 12px; }
+            .field select { font-size: 16px; min-height: 40px; }
+            .field input[type=checkbox] { width: 26px; height: 26px; }
+            .guide summary { padding: 16px 2px; }
+        }
+        @media (max-width: 760px) {
+            .app { padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+            .run { grid-template-columns: auto 1fr auto; gap: 12px; padding: 14px; }
+            .run-side { font-size: 30px; padding: 4px 14px; }
+            .run-side.none { font-size: 22px; }
+            .run-main { grid-column: 1 / -1; grid-row: 2; }
+            .run-msg { font-size: 21px; }
+            .run-count { font-size: 64px; min-width: 0; }
+            .run-ctl { flex-direction: row; justify-content: flex-end; }
+            .run-ctl .btn-light { padding: 9px 14px; }
+            .lsi { padding: 14px 12px; }
+            .lsi-row { grid-template-columns: 1fr auto auto auto; gap: 4px 12px; }
+            .lsi-row .lsi-bar, .lsi-row .lsi-scale { grid-column: 1 / -1; }
+            .lsi-row.h > :last-child { display: none; }
+            .lsi-v { font-size: 19px; }
+            .lsi-pct { font-size: 24px; }
+            header { gap: 10px; }
+            .brand { font-size: 16px; letter-spacing: .1em; }
+            .status { font-size: 12px; line-height: 1.35; }
+            .hero { grid-template-columns: 1fr; gap: 16px; margin-top: 14px; }
+            .detector { font-size: 16px; }
+            .force-display { margin-top: 16px; gap: 10px; }
+            #forceValue { font-size: 124px; }
+            .unit { font-size: 36px; }
+            .newton { font-size: 28px; margin-top: 10px; }
+            .side { display: grid; grid-template-columns: 1fr; }
+            .peak-display { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 12px; padding: 12px 16px; }
+            .peak-display .lbl { width: 100%; }
+            .peak-display .v { font-size: 56px; }
+            .peak-display .n { font-size: 22px; }
+            .actions button { height: 58px; font-size: 17px; }
+            .chart-box { height: 220px; margin-top: 16px; }
+            .results { margin-top: 28px; }
+            .trial-nav { margin-left: 0; width: 100%; justify-content: space-between; }
+            .detail { padding: 14px 12px 16px; }
+            .btn-exclude { margin-left: 0; }
+            .trial-chart { height: 210px; }
+            .groups { grid-template-columns: 1fr; }
+            .tile { padding: 8px 10px; }
+            .tile .value { font-size: 24px; }
+            .tile .value small { font-size: 13px; }
+            table { font-size: 16px; }
+            th, td { padding: 8px 10px; }
+            .row button { flex: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <header>
+        <div class="brand">MUSCLE METER</div>
+        <div id="status" class="status">ยังไม่ได้เชื่อมต่อ</div>
+        <button id="connectBtn" class="connect">Connect Bluetooth</button>
+    </header>
+
+    <section id="run" class="run" hidden aria-live="polite">
+        <div id="runSide" class="run-side">ซ้าย</div>
+        <div class="run-main">
+            <div id="runStep" class="run-step"></div>
+            <div id="runMsg" class="run-msg"></div>
+            <div id="runDots" class="run-dots"></div>
+        </div>
+        <div id="runCount" class="run-count num"></div>
+        <div class="run-ctl">
+            <button id="runSkip" class="btn-light" hidden>ข้ามการพัก</button>
+            <button id="runStop" class="btn-light">หยุด</button>
+        </div>
+    </section>
+
+    <div class="stage">
+    <section class="hero">
+        <div class="live">
+            <div id="detector" class="detector">รอข้อมูลจากเครื่อง</div>
+            <div class="force-display num">
+                <span id="forceValue">0.0</span><span id="unitLabel" class="unit">kg</span>
+            </div>
+            <div class="newton">= <b id="forceN">0.0</b> N</div>
+        </div>
+        <div class="side">
+            <span id="modeBadge" class="mode-badge">STANDBY</span>
+            <div class="peak-display">
+                <div class="lbl">Peak</div>
+                <div class="v"><span id="peakValue">0.0</span> <small id="peakUnit">kg</small></div>
+                <div class="n"><span id="peakN">0.0</span> N</div>
+            </div>
+            <div class="actions">
+                <button id="tareBtn" class="btn-tare">Tare ตั้งศูนย์</button>
+                <button id="resetPeakBtn" class="btn-reset">Reset Peak</button>
+            </div>
+            <div class="side-pick">
+                <span>ข้างที่วัด</span>
+                <div id="sidePick" class="seg" role="group" aria-label="ข้างที่วัด">
+                    <button data-side="" class="on">ไม่ระบุ</button>
+                    <button data-side="L">ซ้าย</button>
+                    <button data-side="R">ขวา</button>
+                </div>
+            </div>
+            <button id="planBtn" class="btn-plan">ทดสอบแบบมีขั้นตอน</button>
+        </div>
+    </section>
+
+    <div class="chart-box"><canvas id="chart" aria-label="กราฟแรงย้อนหลัง 10 วินาที"></canvas></div>
+    </div>
+
+    <section class="results">
+        <div class="sec-head">
+            <h2>ผลการทดสอบ</h2>
+            <div class="trial-nav">
+                <button id="prevTrial" class="icon-btn" aria-label="ครั้งก่อนหน้า" disabled>‹</button>
+                <div id="trialTag" class="trial-tag">–</div>
+                <button id="nextTrial" class="icon-btn" aria-label="ครั้งถัดไป" disabled>›</button>
+            </div>
+        </div>
+
+        <div id="detail" class="detail">
+            <div class="detail-bar">
+                <div class="seg" role="group" aria-label="ช่วงของกราฟ">
+                    <button data-range="all" class="on">ทั้งครั้ง</button>
+                    <button data-range="300">300 ms แรก</button>
+                </div>
+                <div class="legend">
+                    <span><i style="color:var(--onset)"></i>onset</span>
+                    <span><i class="dot" style="background:var(--peak)"></i>peak</span>
+                    <span><i style="color:var(--mute)"></i>80% peak</span>
+                </div>
+                <div id="trialSide" class="seg" role="group" aria-label="ข้างของครั้งนี้" hidden>
+                    <button data-side="">–</button>
+                    <button data-side="L">ซ้าย</button>
+                    <button data-side="R">ขวา</button>
+                </div>
+                <button id="excludeBtn" class="btn-exclude" hidden>ไม่นับครั้งนี้</button>
+            </div>
+            <div class="trial-chart">
+                <canvas id="trialChart" aria-label="กราฟแรงของครั้งที่เลือก"></canvas>
+                <div id="trialEmpty" class="empty">ยังไม่มีผล ออกแรงครั้งแรกแล้วผลจะขึ้นที่นี่</div>
+            </div>
+            <div id="excludedNote" class="excluded-note"></div>
+
+            <div class="groups">
+                <div>
+                    <div class="group-title">แรงสูงสุดและเวลา</div>
+                    <div class="tiles">
+                        <div class="tile key" title="แรงสูงสุดลบแรงพัก (baseline)"><div class="label">Peak Force</div><div class="value" id="rPeak">–</div></div>
+                        <div class="tile" title="เวลาจาก onset ถึง 80% ของแรงสูงสุด เชื่อถือได้มากกว่า TTP"><div class="label">Time to 80% Peak</div><div class="value" id="rT80">–</div></div>
+                        <div class="tile" title="เวลาจาก onset ถึงแรงสูงสุด แปรผันสูง ใช้ประกอบเท่านั้น"><div class="label">Time to Peak (TTP)</div><div class="value" id="rTtp">–</div></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="group-title">RFD ช่วงต้น (0–150 ms)<span class="hint">ระบบประสาทสั่งการ</span></div>
+                    <div class="tiles">
+                        <div class="tile"><div class="label">RFD 0–50 ms</div><div class="value" id="rRfd50">–</div></div>
+                        <div class="tile key"><div class="label">RFD 0–100 ms</div><div class="value" id="rRfd100">–</div></div>
+                        <div class="tile"><div class="label">RFD 0–150 ms</div><div class="value" id="rRfd150">–</div></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="group-title">RFD ช่วงปลาย (&gt;150 ms) และภาพรวม<span class="hint">ประสาท + ความแข็งแรงสูงสุด</span></div>
+                    <div class="tiles">
+                        <div class="tile key"><div class="label">RFD 0–200 ms</div><div class="value" id="rRfd200">–</div></div>
+                        <div class="tile"><div class="label">Peak RFD</div><div class="value" id="rPeakRfd">–</div></div>
+                        <div class="tile"><div class="label">RFD 20–80%</div><div class="value" id="rRfd2080">–</div></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="group-title">แรง ณ เวลาที่กำหนด<span class="hint">แรงสุทธิหลัง onset</span></div>
+                    <div class="tiles">
+                        <div class="tile"><div class="label">Force ＠ 50 ms</div><div class="value" id="rF50">–</div></div>
+                        <div class="tile"><div class="label">Force ＠ 100 ms</div><div class="value" id="rF100">–</div></div>
+                        <div class="tile"><div class="label">Force ＠ 150 ms</div><div class="value" id="rF150">–</div></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="group-title">Impulse<span class="hint">พื้นที่ใต้กราฟแรงสุทธิ</span></div>
+                    <div class="tiles" style="grid-template-columns: repeat(2, 1fr)">
+                        <div class="tile"><div class="label">Impulse 0–100 ms</div><div class="value" id="rImp100">–</div></div>
+                        <div class="tile"><div class="label">Impulse 0–200 ms</div><div class="value" id="rImp200">–</div></div>
+                    </div>
+                </div>
+            </div>
+            <div id="fsNote" class="fs-note"></div>
+        </div>
+
+        <div id="lsi" class="lsi">
+            <div class="lsi-head">
+                <h3>เทียบซ้าย/ขวา (LSI)</h3>
+                <div class="lsi-opt">ข้างที่บาดเจ็บ
+                    <div id="lsiInvolved" class="seg" role="group" aria-label="ข้างที่บาดเจ็บ">
+                        <button data-side="" class="on">ไม่ระบุ</button>
+                        <button data-side="L">ซ้าย</button>
+                        <button data-side="R">ขวา</button>
+                    </div>
+                </div>
+                <div class="lsi-opt">ใช้ค่า
+                    <div id="lsiAgg" class="seg" role="group" aria-label="วิธีรวมค่า">
+                        <button data-agg="best" class="on">ดีที่สุด</button>
+                        <button data-agg="mean">เฉลี่ย</button>
+                    </div>
+                </div>
+            </div>
+            <div id="lsiBody"></div>
+        </div>
+
+        <div class="history">
+            <h3>ประวัติการทดสอบ</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>#</th><th>ข้าง</th><th>Peak N</th><th>T80 ms</th><th>TTP ms</th><th>RFD50</th><th>RFD100</th><th>RFD150</th><th>RFD200</th><th>Peak RFD</th><th>20–80%</th></tr>
+                    </thead>
+                    <tbody id="trialRows"></tbody>
+                </table>
+            </div>
+            <div class="row">
+                <button id="exportBtn" class="btn-light">Export CSV</button>
+                <button id="clearTrialsBtn" class="btn-light btn-danger">ล้างผลทั้งหมด</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="guide">
+        <h2>คู่มือและนิยาม</h2>
+
+        <details open>
+            <summary>วิธีทดสอบให้ได้ค่า RFD ที่เชื่อถือได้</summary>
+            <div class="body">
+                <ol>
+                    <li><b>Pretension 2–3 วินาที:</b> ออกแรงเบา ๆ ค้างไว้ให้สายหรืออุปกรณ์ตึงก่อนเริ่ม เพื่อไม่ให้ช่วงที่อุปกรณ์หย่อนถูกนับเป็นการออกแรง ระบบใช้แรงช่วงนี้เป็น baseline และวัดจากจุดที่แรงเพิ่มขึ้นจากระดับนี้</li>
+                    <li><b>รอข้อความ "พร้อม ออกแรงได้เลย"</b> แล้วออกแรงให้<b>เร็วและแรงที่สุด</b> ค้างไว้ 3–5 วินาที จากนั้นคลายแรง</li>
+                    <li><b>ทำให้เหมือนกันทุกครั้ง:</b> ใช้คำสั่งเดิม มุมข้อต่อเดิม ท่าเดิม และสภาพร่างกายเดียวกัน (ไม่ล้า หรือล้าเท่ากัน) เพราะค่า RFD ไวต่อวิธีทดสอบมาก</li>
+                    <li><b>ทำ 3 ครั้งขึ้นไป</b> พักระหว่างครั้ง แล้วดูค่าที่ดีที่สุดหรือค่าเฉลี่ย กดแถวในตารางประวัติเพื่อดูกราฟของแต่ละครั้ง ครั้งที่ทำพลาดกด "ไม่นับครั้งนี้" ได้</li>
+                </ol>
+            </div>
+        </details>
+
+        <details>
+            <summary>RFD (Rate of Force Development) คืออะไร</summary>
+            <div class="body">
+                <p>อัตราการเพิ่มของแรงต่อเวลา (N/s) บอกว่า<b>สร้างแรงได้เร็วแค่ไหน</b> ต่างจาก Peak Force ที่บอกว่า<b>แรงได้มากแค่ไหน</b> สองคนอาจมีแรงสูงสุดเท่ากัน แต่คนที่ไปถึงแรงนั้นเร็วกว่ามี RFD ดีกว่า ซึ่งสำคัญกับงานที่ต้องออกแรงเร็ว เช่น ทรงตัวเมื่อเกือบล้ม ลงบันได กระโดด หรือวิ่ง</p>
+                <p>การฟื้นฟูที่แรงสูงสุดกลับมาแล้ว แต่ RFD ยังไม่กลับมา ถือว่ายังฟื้นตัวไม่สมบูรณ์ ผู้ป่วยหลังผ่าตัดเอ็นไขว้หน้า (ACL) ที่ผ่านเกณฑ์ความแข็งแรงแล้วมักยังมี RFD ต่ำหรือซ้ายขวาไม่เท่ากัน</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>RFD ช่วงต้น vs ช่วงปลาย</summary>
+            <div class="body">
+                <p><b>ช่วงต้น (0–150 ms):</b> สะท้อนการสั่งงานของระบบประสาทเป็นหลัก คือสั่งกล้ามเนื้อได้เร็วและเรียกใช้หน่วยกล้ามเนื้อได้ไวแค่ไหน ไวต่อความบกพร่องหลังบาดเจ็บ</p>
+                <p><b>ช่วงปลาย (&gt;150 ms):</b> ขึ้นกับทั้งระบบประสาทและความแข็งแรงสูงสุดของกล้ามเนื้อ ยิ่งช่วงเวลายาว ยิ่งสัมพันธ์กับ Peak Force มากขึ้น</p>
+                <p>การดูทั้งสองช่วงช่วยแยกได้ว่าปัญหาอยู่ที่การสั่งงานของระบบประสาท หรือที่ตัวกล้ามเนื้อ</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>นิยามค่าที่คำนวณทั้งหมด</summary>
+            <div class="body">
+                <dl>
+                    <dt>การกรองสัญญาณ (Low-pass filter)</dt>
+                    <dd>ก่อนคำนวณทุกค่าด้านล่าง ข้อมูลจะถูกกรองด้วย Butterworth low-pass 50 Hz แบบ zero-lag (กรองไปและกลับ) เพื่อตัดสัญญาณรบกวนความถี่สูงโดยเส้นแรงไม่เลื่อนเวลา การเคลื่อนไหวของกล้ามเนื้อจริงอยู่ต่ำกว่า 50 Hz จึงไม่สูญเสียข้อมูล ส่วนกราฟ ตัวเลขสด และ Peak บนหน้าจอยังแสดงข้อมูลดิบ</dd>
+                    <dt>Onset (จุดเริ่มออกแรง)</dt>
+                    <dd>จุดสุดท้ายก่อนแรงเกิน baseline + max(3 × SD ของแรงพัก, 2 N) แสดงเป็นเส้นประสีเขียวบนกราฟ ทุกค่าด้านล่างนับเวลาจากจุดนี้</dd>
+                    <dt>Peak Force (N)</dt>
+                    <dd>แรงสูงสุดลบด้วยแรงพัก (baseline) แสดงเป็นจุดสีส้มบนกราฟ</dd>
+                    <dt>Time to 80% Peak (ms)</dt>
+                    <dd>เวลาจาก onset จนแรงถึง 80% ของแรงสูงสุด เชื่อถือได้มากกว่า TTP สำหรับดูความเร็วในการสร้างแรง แต่อาจไม่สะท้อนความสามารถช่วงท้ายทั้งหมด</dd>
+                    <dt>Time to Peak, TTP (ms)</dt>
+                    <dd>เวลาจาก onset ถึงแรงสูงสุด เข้าใจง่าย แต่<b>แปรผันสูง</b> และขึ้นกับวิธีออกแรง จึงไม่ควรใช้ตัดสินใจเพียงค่าเดียว</dd>
+                    <dt>RFD 0–X ms (N/s)</dt>
+                    <dd>(แรง ณ X ms − แรง ณ onset) ÷ X เป็นวิธีที่มีความน่าเชื่อถือสูงในงานวิจัย โดยเฉพาะช่วง 0–100 และ 0–200 ms ในกราฟรายครั้ง ช่วง 0–50/100/150/200 ms แสดงเป็นแถบสีอ่อนไล่ระดับ</dd>
+                    <dt>Peak RFD (N/s)</dt>
+                    <dd>ความชันสูงสุดของกราฟแรง คำนวณเป็นช่วงละ 20 ms ระหว่าง onset ถึงแรงสูงสุด ไวต่อสัญญาณรบกวนมากกว่าค่าอื่น</dd>
+                    <dt>RFD 20–80% (N/s)</dt>
+                    <dd>ความชันระหว่างจุดที่แรงถึง 20% และ 80% ของแรงสูงสุด เพี้ยนน้อยเมื่อ onset คลาดเคลื่อน</dd>
+                    <dt>Force ＠ X ms (N)</dt>
+                    <dd>แรงสุทธิที่ทำได้ ณ X ms หลัง onset เปรียบเทียบง่าย แต่ไวต่อ pretension และคำสั่งของผู้ทดสอบ</dd>
+                    <dt>Impulse 0–X ms (N·s)</dt>
+                    <dd>พื้นที่ใต้กราฟแรงสุทธิ (แรง × เวลา) ตั้งแต่ onset ถึง X ms สะท้อนปริมาณแรงที่สะสมในช่วงเวลาสั้น ๆ เกี่ยวข้องกับความสามารถในการเบรกและชะลอความเร็ว แต่สื่อสารยากและแปรผันมากกว่าค่า RFD</dd>
+                </dl>
+            </div>
+        </details>
+
+        <details>
+            <summary>ความถี่การเก็บข้อมูล (Sampling rate)</summary>
+            <div class="body">
+                <p>งานวิจัยพบว่า 300–500 Hz เพียงพอสำหรับวัด Peak Force และ RFD ในการทดสอบส่วนใหญ่ และค่า RFD แบบช่วงเวลา (0–100, 0–200 ms) เชื่อถือได้ดีแม้ความถี่ต่างกัน งานวิจัยในห้องแล็บระดับหน่วยกล้ามเนื้อแนะนำ 1,000 Hz</p>
+                <p>เครื่องนี้ส่งข้อมูลประมาณ 480 Hz (ห่างกันชุดละ ~2 ms) ซึ่งอยู่ในเกณฑ์เพียงพอ ค่าที่วัดได้จริงแสดงใต้ผลการทดสอบ</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>การทดสอบแบบมีขั้นตอนและการเทียบซ้าย/ขวา (LSI)</summary>
+            <div class="body">
+                <p><b>ทดสอบแบบมีขั้นตอน:</b> กด "ทดสอบแบบมีขั้นตอน" แล้วเลือกข้าง ลำดับ จำนวนครั้ง และเวลาพัก แอปจะบอกให้ออกแรงเบา ๆ ให้สายตึง รอให้แรงนิ่ง นับถอยหลัง 3-2-1 พร้อมเสียง แล้วส่งสัญญาณ "ออกแรง!" หลังค้างไว้ราว 4 วินาทีจะบอกให้คลายแรง จากนั้นนับเวลาพักและเปลี่ยนข้างให้เอง ครั้งที่ออกแรงก่อนสัญญาณหรือออกแรงระหว่างพักจะถูกตั้งเป็น "ไม่นับ" อัตโนมัติ</p>
+                <p><b>LSI (Limb Symmetry Index)</b> = ค่าของข้างที่บาดเจ็บ ÷ ค่าของข้างปกติ × 100 ถ้าไม่ระบุข้างที่บาดเจ็บ จะใช้ข้างที่ค่าน้อยกว่า ÷ ข้างที่มากกว่า เลือกได้ว่าจะใช้ค่าที่ดีที่สุดหรือค่าเฉลี่ยของครั้งที่นับในแต่ละข้าง</p>
+                <p>เกณฑ์ที่ใช้บ่อยก่อนกลับไปเล่นกีฬาหลังผ่าตัด ACL คือ LSI ≥ 90% (แถบสีเขียว) 80–90% เป็นสีเหลือง และต่ำกว่า 80% เป็นสีแดง LSI ของ RFD มักต่ำกว่าของ Peak Force ในผู้ป่วยกลุ่มเดียวกัน จึงควรดูทั้งสองค่า</p>
+                <p>ข้อควรระวัง: LSI ดูสูงได้ถ้าข้างปกติก็อ่อนแรงลงด้วย (เช่น ไม่ได้ออกกำลังหลังบาดเจ็บ) ควรเทียบกับค่าก่อนบาดเจ็บหรือค่าอ้างอิงของกลุ่มเดียวกันเมื่อมี</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>แหล่งอ้างอิง</summary>
+            <div class="body">
+                <ul class="refs">
+                    <li>VALD Health (2026). <a href="https://valdhealth.com/news/understanding-rate-of-force-development" target="_blank" rel="noopener">Understanding Rate of Force Development</a>.</li>
+                    <li>Aagaard P. et al. (2002). Increased rate of force development and neural drive of human skeletal muscle following resistance training. <i>J Appl Physiol</i>, 93(4), 1318–1326.</li>
+                    <li>Maffiuletti N.A. et al. (2016). Rate of force development: physiological and methodological considerations. <i>Eur J Appl Physiol</i>, 116(6), 1091–1116.</li>
+                    <li>Haff G.G. et al. (2015). A comparison of methods for determining the rate of force development during isometric midthigh clean pulls. <i>J Strength Cond Res</i>, 29(2), 386–395.</li>
+                    <li>Tillin N.A. et al. (2013). Explosive force production during isometric squats correlates with athletic performance in rugby union players. <i>J Sports Sci</i>, 31(1), 66–76.</li>
+                    <li>Knezevic O.M. et al. (2014). Asymmetries in explosive strength following anterior cruciate ligament reconstruction. <i>The Knee</i>, 21(6), 1039–1045.</li>
+                    <li>Grindem H. et al. (2016). Simple decision rules can reduce reinjury risk by 84% after ACL reconstruction: the Delaware-Oslo ACL cohort study. <i>Br J Sports Med</i>, 50(13), 804–808.</li>
+                    <li>Wellsandt E. et al. (2017). Limb symmetry indexes can overestimate knee function after anterior cruciate ligament injury. <i>J Orthop Sports Phys Ther</i>, 47(5), 334–338.</li>
+                    <li>Renner K.E. et al. (2022). The impact of sampling frequency on ground reaction force variables. <i>J Biomech</i>, 135, 111034.</li>
+                </ul>
+            </div>
+        </details>
+    </section>
+
+    <dialog id="planDlg">
+        <form method="dialog">
+            <h3>ทดสอบแบบมีขั้นตอน</h3>
+            <div class="field"><label for="pSides">ข้างที่ทดสอบ</label>
+                <select id="pSides"><option value="LR">ทั้งสองข้าง</option><option value="L">ซ้ายอย่างเดียว</option><option value="R">ขวาอย่างเดียว</option></select></div>
+            <div class="field"><label for="pFirst">เริ่มที่ข้าง</label>
+                <select id="pFirst"><option value="L">ซ้าย</option><option value="R">ขวา</option></select></div>
+            <div class="field"><label for="pOrder">ลำดับ</label>
+                <select id="pOrder"><option value="alt">สลับข้างทุกครั้ง</option><option value="block">ครบทีละข้าง</option></select></div>
+            <div class="field"><label for="pPer">จำนวนครั้งต่อข้าง</label>
+                <select id="pPer"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+            <div class="field"><label for="pRest">พักระหว่างครั้ง</label>
+                <select id="pRest"><option value="15">15 วินาที</option><option value="30" selected>30 วินาที</option><option value="60">60 วินาที</option><option value="90">90 วินาที</option><option value="120">2 นาที</option></select></div>
+            <div class="field"><label for="pSound">เสียงสัญญาณ</label><input id="pSound" type="checkbox" checked></div>
+            <div class="dlg-actions">
+                <button value="cancel" class="btn-light">ยกเลิก</button>
+                <button value="start" class="btn-primary">เริ่มทดสอบ</button>
+            </div>
+        </form>
+    </dialog>
+
+    <details class="debug">
+        <summary>ข้อมูลดีบัก (Raw / Rate)</summary>
+        <div id="rawDisplay" class="raw-data">Raw: -</div>
+        <div id="rateDisplay" class="raw-data">Rate: -</div>
+    </details>
+</div>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const forceValueElem = document.getElementById('forceValue');
+        const modeBadgeElem = document.getElementById('modeBadge');
+        const statusElem = document.getElementById('status');
+        const rawDisplayElem = document.getElementById('rawDisplay');
+        const rateElem = document.getElementById('rateDisplay');
+        const unitElem = document.getElementById('unitLabel');
+        const peakValueElem = document.getElementById('peakValue');
+        const peakUnitElem = document.getElementById('peakUnit');
+        const forceNElem = document.getElementById('forceN');
+        const peakNElem = document.getElementById('peakN');
+        const tareBtn = document.getElementById('tareBtn');
+        const resetPeakBtn = document.getElementById('resetPeakBtn');
+        const canvas = document.getElementById('chart');
+        const ctx = canvas.getContext('2d');
+
+        // ใช้ UUID แบบเต็ม (ตัวเดียวกับ 0xFFE0) เพราะเบราว์เซอร์บน iOS อย่าง Bluefy บางรุ่นไม่รับ UUID แบบตัวเลข
+        const SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb";
+        const CHARACTERISTIC_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb";
+
+        // ---- หน่วย: เก็บค่าภายในเป็น Newton ทั้งหมด แสดงผลตามหน่วยใน RAW (kg/lb) พร้อมค่า N ----
+        const N_PER_UNIT = { kg: 9.80665, lb: 4.4482216 };
+        const GRAPH_MIN_RANGE = { kg: 5, lb: 10 };   // สเกลแกน Y ขั้นต่ำของกราฟ
+        let displayUnit = 'kg';   // ตั้งจาก mode byte ของเครื่องเท่านั้น
+
+        let tareN = 0;       // ค่าที่หักออกจากการ Tare
+        let currentN = 0;    // ค่าที่แสดงอยู่ (หัก tare แล้ว)
+        let peakN = 0;       // ค่าสูงสุดในโหมด LIVE (หัก tare แล้ว)
+
+        // ---- ข้อมูลกราฟ ----
+        const WINDOW_MS = 10000;   // แสดงย้อนหลัง 10 วินาที
+        let samples = [];          // { t: เวลา ms, n: แรง N (หัก tare แล้ว) }
+        let lastNotifyTime = null;
+
+        // ---- การวิเคราะห์ RFD ----
+        const TRIGGER_N = 10;              // แรงเหนือ baseline ที่ถือว่าเริ่มการทดสอบ
+        const ONSET_MIN_N = 2;             // เกณฑ์ onset ขั้นต่ำเหนือ baseline (ใช้ 3·SD ถ้ามากกว่า)
+        const RFD_WINDOWS_MS = [50, 100, 150, 200];
+        const FORCE_AT_MS = [50, 100, 150];
+        const IMPULSE_MS = [100, 200];
+        const FILTER_CUTOFF_HZ = 50;       // low-pass ก่อนคำนวณ RFD (กราฟและตัวเลขสดยังใช้ข้อมูลดิบ)
+        const PEAK_RFD_WINDOW_MS = 20;     // ช่วงเวลาที่ใช้หาความชันสูงสุด
+        const MAX_TRIAL_MS = 15000;
+
+        // เวลาของแต่ละเฟรมคิดจากลำดับเฟรม ÷ ความถี่ของเครื่อง (ไม่ใช้เวลาที่ Bluetooth ส่งมาถึง ซึ่งมาเป็นก้อน)
+        let fsEst = null;          // ความถี่การส่งเฟรมของเครื่องที่ประมาณได้ (Hz)
+        let fsFrames = 0;
+        let fsStartTime = null;
+        let frameIdx = 0;          // ลำดับเฟรมสะสม (นับทุกเฟรมรวม HOLD)
+
+        let recent = [];           // เฟรม LIVE ล่าสุด ~2 วินาที { idx, t, n }
+        let trial = null;          // ระหว่างทดสอบ: { frames, base, peak }
+        let trials = [];           // ผลการทดสอบทั้งหมด
+        let detectorState = '';
+
+        const detectorElem = document.getElementById('detector');
+        const fsNoteElem = document.getElementById('fsNote');
+        const trialRowsElem = document.getElementById('trialRows');
+
+        const toDisplay = (n) => n / N_PER_UNIT[displayUnit];
+
+        function updateReadout() {
+            forceValueElem.textContent = toDisplay(currentN).toFixed(1);
+            peakValueElem.textContent = toDisplay(peakN).toFixed(1);
+            forceNElem.textContent = currentN.toFixed(1);
+            peakNElem.textContent = peakN.toFixed(1);
+            unitElem.textContent = displayUnit;
+            peakUnitElem.textContent = displayUnit;
+        }
+
+        tareBtn.addEventListener('click', () => {
+            // ตั้งค่าปัจจุบันเป็นศูนย์ และล้าง Peak กับกราฟให้เริ่มใหม่
+            tareN += currentN;
+            currentN = 0;
+            peakN = 0;
+            samples = [];
+            trial = null;     // ค่าเปลี่ยนกลางการทดสอบ ยกเลิกครั้งนั้น
+            recent = [];
+            updateReadout();
+        });
+
+        resetPeakBtn.addEventListener('click', () => {
+            peakN = 0;
+            updateReadout();
+        });
+
+        // ---- วัดอัตราการรับข้อมูล ----
+        let notifyCount = 0;   // จำนวน notification ที่ได้รับ
+        let byteCount = 0;     // จำนวนไบต์ทั้งหมด
+        let lastTime = performance.now();
+
+        setInterval(() => {
+            const now = performance.now();
+            const sec = (now - lastTime) / 1000;
+            const notifPerSec = notifyCount / sec;
+            const framesPerSec = (byteCount / 3) / sec;   // 1 เฟรม = 3 ไบต์
+            rateElem.textContent =
+                `Rate: ${notifPerSec.toFixed(1)} notif/s | ${framesPerSec.toFixed(1)} Hz (เฟรม/วินาที)`;
+            notifyCount = 0;
+            byteCount = 0;
+            lastTime = now;
+        }, 1000);
+
+        // Safari/Chrome บน iPad และ iPhone ไม่มี Web Bluetooth ต้องเปิดผ่านแอป Bluefy
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS ที่แสดงตัวเป็น Mac
+        const noBluetoothMsg = isIOS
+            ? 'เบราว์เซอร์นี้ไม่รองรับ Bluetooth บน iPad/iPhone ให้เปิดลิงก์นี้ในแอป Bluefy'
+            : 'เบราว์เซอร์นี้ไม่รองรับ Web Bluetooth ใช้ Chrome หรือ Edge';
+        if (!navigator.bluetooth) statusElem.textContent = noBluetoothMsg;
+
+        // กันจอดับระหว่างทดสอบ (จอดับแล้ว Bluetooth มักหลุด)
+        let wakeLock = null;
+        async function keepAwake() {
+            if (!('wakeLock' in navigator) || document.visibilityState !== 'visible' || (wakeLock && !wakeLock.released)) return;
+            try { wakeLock = await navigator.wakeLock.request('screen'); }
+            catch (e) { console.warn('Wake Lock:', e.message); }
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (connectBtn.classList.contains('on')) keepAwake();
+        });
+
+        connectBtn.addEventListener('click', async () => {
+            if (!navigator.bluetooth) {
+                statusElem.textContent = noBluetoothMsg;
+                return;
+            }
+            try {
+                statusElem.textContent = "กำลังเปิดหน้าต่างเลือกอุปกรณ์...";
+
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID]
+                });
+                device.addEventListener('gattserverdisconnected', () => {
+                    statusElem.textContent = "การเชื่อมต่อหลุด กด Connect อีกครั้ง";
+                    connectBtn.textContent = "Connect Bluetooth";
+                    connectBtn.classList.remove('on');
+                    connectBtn.disabled = false;
+                    if (wakeLock) wakeLock.release().catch(() => {});
+                });
+
+                statusElem.textContent = "กำลังเชื่อมต่อกับ " + (device.name || "Bluetooth Device") + "...";
+                const server = await device.gatt.connect();
+
+                statusElem.textContent = "กำลังค้นหา Service...";
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+                statusElem.textContent = device.name || "เชื่อมต่อแล้ว";
+                connectBtn.textContent = "Connected";
+                connectBtn.classList.add('on');
+                connectBtn.disabled = true;
+                keepAwake();
+
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    parseData(event.target.value);
+                });
+
+            } catch (error) {
+                console.error(error);
+                statusElem.textContent = "เกิดข้อผิดพลาด: " + (error.name ? error.name + " – " : "") + error.message;
+            }
+        });
+
+        function parseData(dataView) {
+            notifyCount++;
+            byteCount += dataView.byteLength;
+
+            let hexString = '';
+            for (let i = 0; i < dataView.byteLength; i++) {
+                hexString += ('0' + dataView.getUint8(i).toString(16)).slice(-2).toUpperCase() + '-';
+            }
+            rawDisplayElem.textContent = "Raw: " + hexString.slice(0, -1);
+
+            if (dataView.byteLength < 3) return;
+
+            // ข้อมูลส่งเป็นชุดละ 3 ไบต์: [Weight_High, Weight_Low, Mode]
+            // Mode: nibble ล่าง = หน่วย (1 = kg, 2 = lb), nibble บน = HOLD (1) / LIVE (0)
+            // 0x01 = kg LIVE, 0x11 = kg HOLD, 0x02 = lb LIVE, 0x12 = lb HOLD
+            // ตรวจสอบ phase alignment เผื่อแพ็กเก็ตเริ่มเยื้อง (offset 0, 1 หรือ 2)
+            const isModeByte = (m) => m === 0x01 || m === 0x11 || m === 0x02 || m === 0x12;
+            let offset = 0;
+            for (let i = 0; i <= Math.min(2, dataView.byteLength - 3); i++) {
+                if (isModeByte(dataView.getUint8(i + 2))) {
+                    offset = i;
+                    break;
+                }
+            }
+
+            // แยกเฟรมทั้งหมดในแพ็กเก็ต (16-bit Big-Endian + mode)
+            const frames = [];
+            for (let i = offset; i + 3 <= dataView.byteLength; i += 3) {
+                const mode = dataView.getUint8(i + 2);
+                if (isModeByte(mode)) {
+                    frames.push({ raw: dataView.getUint16(i, false), mode });
+                }
+            }
+            if (frames.length === 0) return;
+
+            // ใช้โหมดของเฟรมสุดท้าย (ล่าสุด)
+            const modeByte = frames[frames.length - 1].mode;
+            const isHold = ((modeByte & 0xF0) === 0x10);
+            const deviceUnit = ((modeByte & 0x0F) === 0x02) ? 'lb' : 'kg';
+
+            // แปลงเป็น Newton (10 หน่วย = 1.0 kg หรือ 1.0 lb ตามหน่วยของเฟรมนั้น) แล้วหัก tare
+            const toN = (f) => (f.raw / 10.0) * N_PER_UNIT[((f.mode & 0x0F) === 0x02) ? 'lb' : 'kg'] - tareN;
+            const isLive = (f) => (f.mode & 0xF0) === 0x00;
+            const sameMode = frames.filter((f) => f.mode === modeByte);
+
+            // ประมาณความถี่ของเครื่องจากจำนวนเฟรมสะสม (เริ่มนับใหม่ถ้าข้อมูลขาดช่วงเกิน 1 วินาที)
+            const now = performance.now();
+            if (fsStartTime === null || now - lastNotifyTime > 1000) {
+                fsStartTime = now;
+                fsFrames = 0;
+            } else {
+                fsFrames += frames.length;
+                const elapsed = (now - fsStartTime) / 1000;
+                if (elapsed >= 1) fsEst = fsFrames / elapsed;
+            }
+            const periodMs = fsEst ? 1000 / fsEst
+                : (lastNotifyTime !== null && now - lastNotifyTime < 500 ? (now - lastNotifyTime) / frames.length : 10);
+            lastNotifyTime = now;
+
+            if (isHold) {
+                currentN = toN(frames[frames.length - 1]);
+            } else {
+                // โหมด LIVE: เฉลี่ยทุกเฟรมในแพ็กเก็ตเพื่อให้ตัวเลขนิ่งขึ้น
+                currentN = sameMode.reduce((s, f) => s + toN(f), 0) / sameMode.length;
+            }
+
+            // ทุกเฟรม: ให้ลำดับและเวลา เฟรมสุดท้ายของแพ็กเก็ต = เวลาปัจจุบัน
+            frames.forEach((f, k) => {
+                const fr = { idx: frameIdx++, t: now - (frames.length - 1 - k) * periodMs, n: toN(f) };
+                if (isLive(f)) {
+                    samples.push({ t: fr.t, n: fr.n });
+                    if (fr.n > peakN) peakN = fr.n;
+                    processLiveFrame(fr);
+                } else if (trial) {
+                    finishTrial();   // เครื่องเข้า HOLD ระหว่างทดสอบ = จบครั้งนั้น
+                }
+            });
+            while (samples.length && samples[0].t < now - WINDOW_MS - 1000) samples.shift();
+
+            displayUnit = deviceUnit;
+            updateReadout();
+
+            modeBadgeElem.textContent = isHold ? "HOLD" : "LIVE";
+            modeBadgeElem.style.backgroundColor = isHold ? "#e67e22" : "#28a745";
+        }
+
+        // ---- ตรวจจับการทดสอบและคำนวณ RFD ----
+        function setDetector(state, text) {
+            if (detectorState === state + text) return;
+            detectorState = state + text;
+            detectorElem.className = 'detector ' + state;
+            detectorElem.textContent = text;
+        }
+
+        // baseline = แรงช่วงพัก 0.2–0.7 วินาทีก่อนเฟรมนี้ (เว้นช่วงใกล้ ๆ ไว้เผื่อเริ่มออกแรงแล้ว)
+        function baselineStats(frames, t) {
+            const win = frames.filter((f) => f.t >= t - 700 && f.t <= t - 200);
+            if (win.length < 3) return null;
+            const mean = win.reduce((s, f) => s + f.n, 0) / win.length;
+            const sd = Math.sqrt(win.reduce((s, f) => s + (f.n - mean) ** 2, 0) / win.length);
+            return { mean, sd };
+        }
+
+        function processLiveFrame(fr) {
+            recent.push(fr);
+            while (recent.length && recent[0].t < fr.t - 2000) recent.shift();
+
+            if (!trial) {
+                const base = baselineStats(recent, fr.t);
+                if (!base) {
+                    setDetector('', 'รอให้แรงนิ่งสักครู่...');
+                } else if (fr.n > base.mean + TRIGGER_N) {
+                    trial = { frames: recent.slice(), base, peak: fr.n, trigPos: recent.length - 1 };
+                    setDetector('active', 'กำลังบันทึก...');
+                } else {
+                    setDetector('ready', 'พร้อม ออกแรงได้เลย');
+                }
+                return;
+            }
+
+            trial.frames.push(fr);
+            if (fr.n > trial.peak) trial.peak = fr.n;
+            // จบเมื่อคลายแรงต่ำกว่าครึ่งของเกณฑ์เริ่ม หรือนานเกินกำหนด
+            if (fr.n < trial.base.mean + TRIGGER_N / 2 || fr.t - trial.frames[0].t > MAX_TRIAL_MS) {
+                finishTrial();
+            }
+        }
+
+        function finishTrial() {
+            const result = analyzeTrial(trial);
+            trial = null;
+            recent = [];   // ต้องพักให้แรงนิ่งใหม่ก่อนครั้งถัดไป
+            if (result) {
+                result.no = trials.length + 1;
+                trials.push(result);
+                showResult(result);
+                setDetector('', `บันทึกครั้งที่ ${result.no} แล้ว พักให้แรงนิ่งก่อนวัดครั้งถัดไป`);
+            } else {
+                setDetector('', 'ข้อมูลไม่พอคำนวณ ลองใหม่อีกครั้ง');
+            }
+        }
+
+        // Butterworth low-pass อันดับ 2 กรองไปและกลับ (zero-lag, รวมเป็นอันดับ 4) เส้นแรงจึงไม่เลื่อนเวลา
+        function lowPassZeroLag(values, fs, fc) {
+            if (fc >= fs / 2) return values.slice();   // ความถี่เครื่องต่ำเกินกว่าจะกรองที่ fc นี้
+            const K = Math.tan(Math.PI * fc / fs);
+            const norm = 1 / (1 + Math.SQRT2 * K + K * K);
+            const b0 = K * K * norm, b1 = 2 * b0, b2 = b0;
+            const a1 = 2 * (K * K - 1) * norm;
+            const a2 = (1 - Math.SQRT2 * K + K * K) * norm;
+            const pass = (x) => {
+                // เริ่มที่สถานะคงที่ของค่าแรก เพื่อไม่ให้เกิดสัญญาณกระชากตอนต้น
+                const y = new Array(x.length);
+                let x1 = x[0], x2 = x[0], y1 = x[0], y2 = x[0];
+                for (let i = 0; i < x.length; i++) {
+                    y[i] = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+                    x2 = x1; x1 = x[i];
+                    y2 = y1; y1 = y[i];
+                }
+                return y;
+            };
+            return pass(pass(values).reverse()).reverse();
+        }
+
+        function analyzeTrial(tr) {
+            const fs = fsEst;
+            if (!fs || tr.frames.length < 3) return null;
+
+            // ใช้ข้อมูลที่กรองแล้วในการวิเคราะห์ทั้งหมด และหา baseline ใหม่จากข้อมูลที่กรองแล้ว
+            const filtered = lowPassZeroLag(tr.frames.map((f) => f.n), fs, FILTER_CUTOFF_HZ);
+            const fr = tr.frames.map((f, i) => ({ idx: f.idx, t: f.t, n: filtered[i] }));
+            const { mean, sd } = baselineStats(fr, fr[tr.trigPos].t) || tr.base;
+
+            // onset = เฟรมสุดท้ายที่แรงยังไม่เกิน baseline + max(3·SD, ONSET_MIN_N) ก่อนถึงเกณฑ์เริ่ม
+            const onsetThr = mean + Math.max(3 * sd, ONSET_MIN_N);
+            const trig = fr.findIndex((f) => f.n > mean + TRIGGER_N);
+            if (trig < 0) return null;
+            let on = trig;
+            while (on > 0 && fr[on - 1].n > onsetThr) on--;
+            on = Math.max(0, on - 1);
+
+            const F0 = fr[on].n;
+            const sec = (i) => (fr[i].idx - fr[on].idx) / fs;
+
+            let p = on;
+            for (let i = on; i < fr.length; i++) if (fr[i].n > fr[p].n) p = i;
+            const netPeak = fr[p].n - F0;
+            if (p === on || netPeak < TRIGGER_N) return null;
+
+            // แรง ณ เวลา tau วินาทีหลัง onset (interpolate เชิงเส้นตามลำดับเฟรม)
+            const forceAt = (tau) => {
+                const target = fr[on].idx + tau * fs;
+                for (let i = on; i < fr.length - 1; i++) {
+                    if (fr[i + 1].idx >= target) {
+                        const a = (target - fr[i].idx) / (fr[i + 1].idx - fr[i].idx);
+                        return fr[i].n + a * (fr[i + 1].n - fr[i].n);
+                    }
+                }
+                return null;
+            };
+
+            const rfd = {};
+            for (const ms of RFD_WINDOWS_MS) {
+                const tau = ms / 1000;
+                const F = tau * fs >= 1 ? forceAt(tau) : null;   // สั้นกว่า 1 เฟรม = คำนวณไม่ได้
+                rfd[ms] = F === null ? null : (F - F0) / tau;
+            }
+
+            // Peak RFD: ความชันสูงสุดในช่วง ~20 ms ระหว่าง onset ถึง peak
+            const k = Math.max(1, Math.round(PEAK_RFD_WINDOW_MS / 1000 * fs));
+            let peakRfd = netPeak / sec(p);
+            for (let i = on; i + k <= p; i++) {
+                const slope = (fr[i + k].n - fr[i].n) / ((fr[i + k].idx - fr[i].idx) / fs);
+                if (slope > peakRfd) peakRfd = slope;
+            }
+
+            // RFD 20–80%: ความชันระหว่างจุดที่แรงถึง 20% และ 80% ของ peak สุทธิ
+            const crossTime = (frac) => {
+                const level = F0 + frac * netPeak;
+                for (let i = on + 1; i <= p; i++) {
+                    if (fr[i].n >= level) {
+                        const a = (level - fr[i - 1].n) / (fr[i].n - fr[i - 1].n);
+                        return sec(i - 1) + a * (sec(i) - sec(i - 1));
+                    }
+                }
+                return null;
+            };
+            const t20 = crossTime(0.2), t80 = crossTime(0.8);
+            const rfd2080 = (t20 !== null && t80 !== null && t80 > t20) ? 0.6 * netPeak / (t80 - t20) : null;
+
+            // แรงสุทธิ ณ เวลาที่กำหนดหลัง onset
+            const forceAtMs = {};
+            for (const ms of FORCE_AT_MS) {
+                const F = forceAt(ms / 1000);
+                forceAtMs[ms] = F === null ? null : F - F0;
+            }
+
+            // Impulse สุทธิ (พื้นที่ใต้กราฟ F − F0) จาก onset ถึง tau วินาที แบบสี่เหลี่ยมคางหมู
+            const impulseTo = (tau) => {
+                const target = fr[on].idx + tau * fs;
+                if (fr[fr.length - 1].idx < target) return null;
+                let sum = 0;
+                for (let i = on; i < fr.length - 1 && fr[i].idx < target; i++) {
+                    const a = fr[i], b = fr[i + 1];
+                    const bIdx = Math.min(b.idx, target);
+                    const bN = a.n + (bIdx - a.idx) / (b.idx - a.idx) * (b.n - a.n);
+                    sum += ((a.n - F0) + (bN - F0)) / 2 * (bIdx - a.idx) / fs;
+                }
+                return sum;
+            };
+            const impulse = {};
+            for (const ms of IMPULSE_MS) impulse[ms] = impulseTo(ms / 1000);
+
+            return {
+                peakN: fr[p].n - mean,
+                ttpMs: sec(p) * 1000,
+                t80Ms: t80 === null ? null : t80 * 1000,
+                rfd, peakRfd, rfd2080, forceAtMs, impulse, fs,
+                onsetT: fr[on].t,
+                peakT: fr[p].t,
+                peakAbsN: fr[p].n,
+            };
+        }
+
+        const fmtN = (v) => v === null ? '–' : Math.round(v).toLocaleString('en-US');
+
+        // ---- แสดงผลรายครั้ง ----
+        const detailElem = document.getElementById('detail');
+        const trialTagElem = document.getElementById('trialTag');
+        const prevBtn = document.getElementById('prevTrial');
+        const nextBtn = document.getElementById('nextTrial');
+        const excludeBtn = document.getElementById('excludeBtn');
+        const trialEmptyElem = document.getElementById('trialEmpty');
+        const trialCanvas = document.getElementById('trialChart');
+        const tctx = trialCanvas.getContext('2d');
+        const TRIAL_PRE_MS = 300;    // เก็บกราฟก่อน onset ไว้ดู pretension
+        let selected = null;         // ผลของครั้งที่กำลังดู
+        let trialRange = 'all';      // 'all' = ทั้งครั้ง, '300' = 300 ms แรก
+        const SIDE_NAME = { L: 'ซ้าย', R: 'ขวา' };
+        let currentSide = '';        // ข้างที่จะติดให้ครั้งถัดไป: '', 'L', 'R'
+        const sidePickElem = document.getElementById('sidePick');
+        const trialSideElem = document.getElementById('trialSide');
+        const excludedNoteElem = document.getElementById('excludedNote');
+
+        function showResult(r) {
+            // เก็บเส้นแรงดิบของครั้งนี้ไว้ดูภายหลัง (เวลาเป็น ms นับจาก onset)
+            r.curve = samples.filter((s) => s.t >= r.onsetT - TRIAL_PRE_MS).map((s) => ({ ms: s.t - r.onsetT, n: s.n }));
+            r.excluded = false;
+            r.note = '';
+            r.side = currentSide;
+            runOnResult(r);
+            renderTable(r.no);
+            selectTrial(r, true);
+        }
+
+        function fillTiles(r) {
+            const set = (id, v, unit) => {
+                document.getElementById(id).innerHTML = v === null ? '–' : `${v}<small>${unit}</small>`;
+            };
+            const ms = (v) => v === null ? null : Math.round(v);
+            const n1 = (v) => v === null ? null : v.toFixed(1);
+            const nps = (v) => v === null ? null : fmtN(v);
+            set('rPeak', n1(r.peakN), 'N');
+            set('rT80', ms(r.t80Ms), 'ms');
+            set('rTtp', ms(r.ttpMs), 'ms');
+            set('rRfd50', nps(r.rfd[50]), 'N/s');
+            set('rRfd100', nps(r.rfd[100]), 'N/s');
+            set('rRfd150', nps(r.rfd[150]), 'N/s');
+            set('rRfd200', nps(r.rfd[200]), 'N/s');
+            set('rPeakRfd', nps(r.peakRfd), 'N/s');
+            set('rRfd2080', nps(r.rfd2080), 'N/s');
+            set('rF50', n1(r.forceAtMs[50]), 'N');
+            set('rF100', n1(r.forceAtMs[100]), 'N');
+            set('rF150', n1(r.forceAtMs[150]), 'N');
+            set('rImp100', r.impulse[100] === null ? null : r.impulse[100].toFixed(2), 'N·s');
+            set('rImp200', r.impulse[200] === null ? null : r.impulse[200].toFixed(2), 'N·s');
+
+            // งานวิจัยถือว่า 300–500 Hz เพียงพอสำหรับ Peak Force และ RFD
+            const periodMs = 1000 / r.fs;
+            fsNoteElem.style.color = r.fs >= 300 ? '' : 'var(--peak)';
+            fsNoteElem.textContent = `ความถี่เครื่อง ≈ ${r.fs.toFixed(0)} Hz (1 เฟรม ≈ ${periodMs.toFixed(1)} ms) ` +
+                (r.fs >= 300 ? 'เพียงพอสำหรับวัด RFD (เกณฑ์ 300–500 Hz)'
+                    : 'ต่ำกว่าเกณฑ์ 300 Hz ค่า RFD ช่วงสั้น ๆ (0–50 ms) และ Peak RFD อาจคลาดเคลื่อน') +
+                ` · กรองด้วย low-pass ${FILTER_CUTOFF_HZ} Hz (Butterworth zero-lag) ก่อนคำนวณ`;
+        }
+
+        function clearTiles() {
+            document.querySelectorAll('.tile .value').forEach((el) => { el.textContent = '–'; });
+            fsNoteElem.textContent = '';
+        }
+
+        function renderTable(newNo) {
+            trialRowsElem.innerHTML = '';
+            renderLsi();
+            if (!trials.length) {
+                trialRowsElem.innerHTML = '<tr class="empty-row"><td colspan="11">ยังไม่มีการทดสอบ</td></tr>';
+                return;
+            }
+            trials.slice().reverse().forEach((r) => {
+                const tr = document.createElement('tr');
+                const sideTd = document.createElement('td');
+                sideTd.innerHTML = r.side ? `<span class="chip ${r.side}">${SIDE_NAME[r.side]}</span>` : '–';
+                [r.no, sideTd, r.peakN.toFixed(1), r.t80Ms === null ? '–' : Math.round(r.t80Ms), Math.round(r.ttpMs),
+                 fmtN(r.rfd[50]), fmtN(r.rfd[100]), fmtN(r.rfd[150]), fmtN(r.rfd[200]),
+                 fmtN(r.peakRfd), fmtN(r.rfd2080)].forEach((v) => {
+                    if (v instanceof Node) { tr.appendChild(v); return; }
+                    const td = document.createElement('td');
+                    td.textContent = v;
+                    tr.appendChild(td);
+                });
+                if (r.note) tr.title = r.note;
+                tr.tabIndex = 0;
+                tr.dataset.no = r.no;
+                tr.classList.toggle('sel', r === selected);
+                tr.classList.toggle('off', r.excluded);
+                if (r.no === newNo) tr.classList.add('new');
+                tr.addEventListener('click', () => selectTrial(r));
+                tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectTrial(r); } });
+                trialRowsElem.appendChild(tr);
+            });
+        }
+
+        function selectTrial(r, isNew) {
+            selected = r;
+            const i = trials.indexOf(r);
+            prevBtn.disabled = !r || i <= 0;
+            nextBtn.disabled = !r || i >= trials.length - 1;
+            trialTagElem.innerHTML = r ? `<small>ครั้งที่</small>${r.no}` + (r.side ? ` <span class="chip ${r.side}">${SIDE_NAME[r.side]}</span>` : '') : '–';
+            excludeBtn.hidden = !r;
+            trialSideElem.hidden = !r;
+            trialEmptyElem.hidden = !!r;
+            if (r) {
+                setSeg(trialSideElem, 'side', r.side);
+                excludeBtn.textContent = r.excluded ? 'นับครั้งนี้กลับ' : 'ไม่นับครั้งนี้';
+                excludedNoteElem.textContent = 'ครั้งนี้ไม่นับ' + (r.note ? ` (${r.note})` : '') + ' ไม่รวมใน LSI และไม่ถูกส่งออกใน CSV';
+                detailElem.classList.toggle('excluded', r.excluded);
+                fillTiles(r);
+            } else {
+                detailElem.classList.remove('excluded');
+                clearTiles();
+            }
+            trialRowsElem.querySelectorAll('tr[data-no]').forEach((tr) => tr.classList.toggle('sel', r && +tr.dataset.no === r.no));
+            if (isNew) {
+                detailElem.classList.remove('flash');
+                void detailElem.offsetWidth;
+                detailElem.classList.add('flash');
+            }
+            drawTrial();
+        }
+
+        prevBtn.addEventListener('click', () => { const i = trials.indexOf(selected); if (i > 0) selectTrial(trials[i - 1]); });
+        nextBtn.addEventListener('click', () => { const i = trials.indexOf(selected); if (i < trials.length - 1) selectTrial(trials[i + 1]); });
+        excludeBtn.addEventListener('click', () => {
+            if (!selected) return;
+            selected.excluded = !selected.excluded;
+            renderTable();
+            selectTrial(selected);
+        });
+        trialSideElem.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+            if (!selected) return;
+            selected.side = b.dataset.side;
+            renderTable();
+            selectTrial(selected);
+        }));
+
+        // ---- ข้างที่วัด ----
+        function setSeg(group, key, value) {
+            group.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset[key] === value));
+        }
+        function setCurrentSide(s) {
+            currentSide = s;
+            setSeg(sidePickElem, 'side', s);
+        }
+        sidePickElem.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => setCurrentSide(b.dataset.side)));
+
+        // ---- เทียบซ้าย/ขวา (LSI) ----
+        const LSI_METRICS = [
+            ['Peak Force', 'N', (r) => r.peakN, (v) => v.toFixed(1)],
+            ['RFD 0–50 ms', 'N/s', (r) => r.rfd[50], fmtN],
+            ['RFD 0–100 ms', 'N/s', (r) => r.rfd[100], fmtN],
+            ['RFD 0–200 ms', 'N/s', (r) => r.rfd[200], fmtN],
+            ['Peak RFD', 'N/s', (r) => r.peakRfd, fmtN],
+        ];
+        let lsiInvolved = '';    // '' = ไม่ระบุ, 'L', 'R'
+        let lsiAgg = 'best';     // 'best' | 'mean'
+
+        function renderLsi() {
+            const body = document.getElementById('lsiBody');
+            const bySide = (s) => trials.filter((r) => r.side === s && !r.excluded);
+            const L = bySide('L'), R = bySide('R');
+            if (!L.length || !R.length) {
+                body.innerHTML = `<div class="lsi-empty">ต้องมีอย่างน้อยข้างละ 1 ครั้งที่นับ (ตอนนี้ ซ้าย ${L.length} · ขวา ${R.length}) ` +
+                    'เลือก "ข้างที่วัด" ก่อนออกแรง หรือใช้ "ทดสอบแบบมีขั้นตอน"</div>';
+                return;
+            }
+            const agg = (list, get) => {
+                const v = list.map(get).filter((x) => x !== null);
+                if (!v.length) return null;
+                return lsiAgg === 'best' ? Math.max(...v) : v.reduce((a, b) => a + b, 0) / v.length;
+            };
+            const MAX_PCT = 120;
+            let html = `<div class="lsi-table"><div class="lsi-row h"><div></div><div class="lsi-v L" style="font-size:13px">ซ้าย (${L.length})</div>` +
+                `<div class="lsi-v R" style="font-size:13px">ขวา (${R.length})</div><div style="text-align:right">LSI</div>` +
+                `<div class="lsi-scale">${[0, 50, 90, 120].map((p) => `<span style="left:${p / MAX_PCT * 100}%">${p}%</span>`).join('')}</div></div>`;
+            for (const [name, unit, get, fmt] of LSI_METRICS) {
+                const l = agg(L, get), r = agg(R, get);
+                let pct = null, sub = '';
+                if (l !== null && r !== null && l > 0 && r > 0) {
+                    if (lsiInvolved) {
+                        pct = (lsiInvolved === 'L' ? l / r : r / l) * 100;
+                    } else {
+                        pct = Math.min(l, r) / Math.max(l, r) * 100;
+                        sub = l < r ? 'ซ้ายน้อยกว่า' : r < l ? 'ขวาน้อยกว่า' : '';
+                    }
+                }
+                const cls = pct === null ? '' : pct >= 90 ? 'ok' : pct >= 80 ? 'mid' : 'low';
+                html += `<div class="lsi-row"><div class="lsi-name">${name}<small>${unit}</small></div>` +
+                    `<div class="lsi-v">${l === null ? '–' : fmt(l)}</div><div class="lsi-v">${r === null ? '–' : fmt(r)}</div>` +
+                    `<div class="lsi-pct ${cls}">${pct === null ? '–' : Math.round(pct) + '%'}${sub ? `<small>${sub}</small>` : ''}</div>` +
+                    `<div class="lsi-bar">${pct === null ? '' : `<i class="${cls}" style="width:${Math.min(pct, MAX_PCT) / MAX_PCT * 100}%"></i>`}` +
+                    `<b style="left:${90 / MAX_PCT * 100}%"></b><b class="t100" style="left:${100 / MAX_PCT * 100}%"></b></div></div>`;
+            }
+            html += '</div><div class="lsi-note">' + (lsiInvolved
+                ? `LSI = ข้าง${SIDE_NAME[lsiInvolved]} (บาดเจ็บ) ÷ ข้าง${SIDE_NAME[lsiInvolved === 'L' ? 'R' : 'L'] } × 100`
+                : 'ไม่ได้ระบุข้างที่บาดเจ็บ: LSI = ข้างที่น้อยกว่า ÷ ข้างที่มากกว่า × 100') +
+                ` · ใช้${lsiAgg === 'best' ? 'ค่าที่ดีที่สุด' : 'ค่าเฉลี่ย'}ของแต่ละข้าง · เส้นขีดที่ 90% และ 100%</div>`;
+            body.innerHTML = html;
+        }
+        document.querySelectorAll('#lsiInvolved button').forEach((b) => b.addEventListener('click', () => {
+            lsiInvolved = b.dataset.side;
+            setSeg(document.getElementById('lsiInvolved'), 'side', lsiInvolved);
+            renderLsi();
+        }));
+        document.querySelectorAll('#lsiAgg button').forEach((b) => b.addEventListener('click', () => {
+            lsiAgg = b.dataset.agg;
+            setSeg(document.getElementById('lsiAgg'), 'agg', lsiAgg);
+            renderLsi();
+        }));
+
+        // ---- เสียงสัญญาณ ----
+        let audioCtx = null;
+        function beep(freq, dur, vol = 0.3) {
+            if (!plan.sound) return;
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                const t = audioCtx.currentTime;
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = 'sine';
+                o.frequency.value = freq;
+                g.gain.setValueAtTime(vol, t);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+                o.connect(g).connect(audioCtx.destination);
+                o.start(t);
+                o.stop(t + dur + 0.02);
+            } catch (e) { /* เบราว์เซอร์ไม่รองรับเสียง */ }
+        }
+        const vibrate = (ms) => {
+            const ua = navigator.userActivation;
+            try { if (navigator.vibrate && (!ua || ua.hasBeenActive)) navigator.vibrate(ms); } catch (e) { }
+        };
+
+        // ---- โหมดทดสอบแบบมีขั้นตอน ----
+        // ใช้การตรวจจับอัตโนมัติเดิมทั้งหมด โหมดนี้แค่อ่านสถานะ (พร้อม / กำลังบันทึก) แล้วบอกจังหวะให้ผู้ทดสอบ
+        const PLAN_KEY = 'mm-plan';
+        const plan = { sides: 'LR', first: 'L', order: 'alt', per: 3, rest: 30, sound: true };
+        try { Object.assign(plan, JSON.parse(localStorage.getItem(PLAN_KEY)) || {}); } catch (e) { }
+        const READY_HOLD_MS = 1000;   // ต้องนิ่งต่อเนื่องเท่านี้ก่อนเริ่มนับถอยหลัง
+        const NO_PUSH_MS = 6000;      // หลังสัญญาณ ถ้าไม่ออกแรงภายในเวลานี้ให้เริ่มครั้งนั้นใหม่
+        const RELEASE_CUE_MS = 4000;  // ค้างแรงนานเท่านี้แล้วบอกให้คลาย
+        let run = null;
+
+        const runElem = document.getElementById('run');
+        const runSideElem = document.getElementById('runSide');
+        const runStepElem = document.getElementById('runStep');
+        const runMsgElem = document.getElementById('runMsg');
+        const runDotsElem = document.getElementById('runDots');
+        const runCountElem = document.getElementById('runCount');
+        const runSkipBtn = document.getElementById('runSkip');
+        const planDlg = document.getElementById('planDlg');
+
+        const detState = () => detectorElem.classList.contains('active') ? 'active'
+            : detectorElem.classList.contains('ready') ? 'ready' : 'wait';
+
+        function buildSteps(p) {
+            const sides = p.sides === 'LR' ? [p.first, p.first === 'L' ? 'R' : 'L'] : [p.sides];
+            const out = [];
+            if (p.order === 'block') sides.forEach((s) => { for (let k = 0; k < p.per; k++) out.push(s); });
+            else for (let k = 0; k < p.per; k++) sides.forEach((s) => out.push(s));
+            return out;
+        }
+
+        function setPhase(phase, msg) {
+            run.phase = phase;
+            run.t0 = performance.now();
+            run.readySince = null;
+            run.activeSince = null;
+            run.cued = false;
+            run.lastCount = null;
+            if (phase === 'prep' && run.i < run.steps.length) setCurrentSide(run.steps[run.i]);
+            run.msg = msg || '';
+            renderRun();
+        }
+
+        function renderRun() {
+            if (!run) return;
+            const side = run.steps[Math.min(run.i, run.steps.length - 1)];
+            const done = run.phase === 'done';
+            runSideElem.className = 'run-side ' + (done ? 'none' : side);
+            runSideElem.textContent = done ? 'ครบ' : SIDE_NAME[side];
+            const nSide = run.steps.filter((s) => s === side).length;
+            const kSide = run.steps.slice(0, run.i + 1).filter((s) => s === side).length;
+            runStepElem.textContent = done ? `ทดสอบครบ ${run.steps.length} ครั้ง`
+                : run.phase === 'rest' ? `พัก · ครั้งถัดไป: ข้าง${SIDE_NAME[side]} ครั้งที่ ${kSide}/${nSide}`
+                : `ข้าง${SIDE_NAME[side]} · ครั้งที่ ${kSide}/${nSide}`;
+            runDotsElem.innerHTML = run.steps.map((s, k) =>
+                `<i class="${s}${k < run.i ? ' done' : ''}${k === run.i && !done ? ' cur' : ''}"></i>`).join('');
+            runSkipBtn.hidden = run.phase !== 'rest';
+            document.getElementById('runStop').textContent = done ? 'ปิด' : 'หยุด';
+            runElem.className = 'run ' + run.phase;
+            if (run.phase === 'release') runElem.className = 'run go release';
+        }
+
+        function startRun() {
+            run = { steps: buildSteps(plan), i: 0 };
+            runElem.hidden = false;
+            sidePickElem.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+            beep(1, 0.01, 0.0001);   // ปลดล็อกเสียงด้วยการกดของผู้ใช้
+            setPhase('prep');
+            runElem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+
+        function stopRun() {
+            run = null;
+            runElem.hidden = true;
+            sidePickElem.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+        }
+
+        function runOnResult(r) {
+            if (!run) return;
+            if (run.phase === 'go' || run.phase === 'release') {
+                r.side = run.steps[run.i];
+                run.i++;
+                beep(988, 0.12);
+                setTimeout(() => beep(1319, 0.18), 130);
+                if (run.i >= run.steps.length) {
+                    setPhase('done');
+                    renderLsi();
+                } else {
+                    setPhase('rest');
+                }
+            } else if (run.phase !== 'done') {
+                r.excluded = true;
+                r.note = run.phase === 'rest' ? 'ออกแรงระหว่างพัก' : 'ออกแรงก่อนสัญญาณ';
+                if (run.phase !== 'rest') setPhase('false', 'ออกแรงก่อนสัญญาณ ครั้งนี้ไม่นับ');
+            }
+        }
+
+        setInterval(() => {
+            if (!run) return;
+            const now = performance.now(), el = now - run.t0, det = detState();
+            const noData = lastNotifyTime === null || now - lastNotifyTime > 1500;
+            let msg = run.msg, count = '';
+
+            if (run.phase === 'prep') {
+                if (noData) {
+                    msg = 'รอข้อมูลจากเครื่อง เชื่อมต่อ Bluetooth ก่อน';
+                } else if (det === 'active') {
+                    run.phase = 'false';
+                    run.msg = 'ออกแรงก่อนสัญญาณ ครั้งนี้ไม่นับ';
+                } else if (det === 'ready') {
+                    run.readySince = run.readySince || now;
+                    msg = 'นิ่งไว้... กำลังจะนับถอยหลัง';
+                    if (now - run.readySince >= READY_HOLD_MS) setPhase('count');
+                } else {
+                    run.readySince = null;
+                    msg = run.msg || 'ออกแรงเบา ๆ ให้สายตึง แล้วนิ่งไว้';
+                }
+            } else if (run.phase === 'count') {
+                const n = 3 - Math.floor(el / 1000);
+                if (det === 'active') {
+                    setPhase('false', 'ออกแรงก่อนสัญญาณ ครั้งนี้ไม่นับ');
+                } else if (det === 'wait') {
+                    setPhase('prep', 'แรงยังไม่นิ่ง เริ่มใหม่');
+                } else if (n <= 0) {
+                    setPhase('go');
+                    beep(1320, 0.55, 0.4);
+                    vibrate(300);
+                } else {
+                    if (n !== run.lastCount) { run.lastCount = n; beep(880, 0.12); }
+                    msg = 'เตรียมออกแรง';
+                    count = n;
+                }
+            } else if (run.phase === 'go' || run.phase === 'release') {
+                if (det === 'active') {
+                    run.activeSince = run.activeSince || now;
+                    if (!run.cued && now - run.activeSince >= RELEASE_CUE_MS) {
+                        run.cued = true;
+                        run.phase = 'release';
+                        beep(660, 0.3);
+                        vibrate(150);
+                    }
+                    msg = run.phase === 'release' ? 'คลายแรงได้' : 'ค้างไว้!';
+                } else if (run.activeSince) {
+                    // ออกแรงแล้วแต่ไม่มีผล (ข้อมูลไม่พอคำนวณ หรือกด Tare ระหว่างทดสอบ)
+                    setPhase('prep', 'คำนวณไม่ได้ ลองครั้งนี้ใหม่');
+                } else if (el > NO_PUSH_MS) {
+                    setPhase('prep', 'ไม่พบการออกแรง ลองครั้งนี้ใหม่');
+                } else {
+                    msg = 'ออกแรง! เร็วและแรงที่สุด';
+                }
+            } else if (run.phase === 'false') {
+                if (det !== 'active') setPhase('prep', 'เริ่มครั้งนี้ใหม่ ออกแรงเบา ๆ ให้สายตึง');
+            } else if (run.phase === 'rest') {
+                const left = Math.ceil(plan.rest - el / 1000);
+                if (left <= 0) setPhase('prep');
+                else { msg = 'พัก คลายกล้ามเนื้อ'; count = left; }
+            } else if (run.phase === 'done') {
+                msg = 'ดูผลเทียบซ้าย/ขวาด้านล่าง';
+                count = '✓';
+            }
+            if (run) {
+                runElem.classList.toggle('bad', run.phase === 'false' || /ไม่|ลอง/.test(msg));
+                if (run.phase === 'false') msg = run.msg;
+                runMsgElem.textContent = msg;
+                runCountElem.textContent = count;
+                if (run.phase !== runElem.dataset.phase) { runElem.dataset.phase = run.phase; renderRun(); }
+            }
+        }, 100);
+
+        document.getElementById('planBtn').addEventListener('click', () => {
+            document.getElementById('pSides').value = plan.sides;
+            document.getElementById('pFirst').value = plan.first;
+            document.getElementById('pOrder').value = plan.order;
+            document.getElementById('pPer').value = String(plan.per);
+            document.getElementById('pRest').value = String(plan.rest);
+            document.getElementById('pSound').checked = plan.sound;
+            planDlg.showModal();
+        });
+        planDlg.addEventListener('close', () => {
+            if (planDlg.returnValue !== 'start') return;
+            plan.sides = document.getElementById('pSides').value;
+            plan.first = document.getElementById('pFirst').value;
+            plan.order = document.getElementById('pOrder').value;
+            plan.per = +document.getElementById('pPer').value;
+            plan.rest = +document.getElementById('pRest').value;
+            plan.sound = document.getElementById('pSound').checked;
+            try { localStorage.setItem(PLAN_KEY, JSON.stringify(plan)); } catch (e) { }
+            startRun();
+        });
+        document.getElementById('runStop').addEventListener('click', stopRun);
+        runSkipBtn.addEventListener('click', () => { if (run && run.phase === 'rest') setPhase('prep'); });
+        document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+            trialRange = b.dataset.range;
+            document.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x === b));
+            drawTrial();
+        }));
+
+        document.getElementById('clearTrialsBtn').addEventListener('click', () => {
+            if (trials.length && !confirm(`ล้างผลทั้งหมด ${trials.length} ครั้ง?`)) return;
+            trials = [];
+            renderTable();
+            selectTrial(null);
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const kept = trials.filter((r) => !r.excluded);
+            if (!kept.length) return;
+            const r1 = (v) => v === null ? '' : v.toFixed(1);
+            const r3 = (v) => v === null ? '' : v.toFixed(3);
+            const lines = ['trial,peak_N,time_to_80pct_peak_ms,time_to_peak_ms,' +
+                'rfd_0_50_Nps,rfd_0_100_Nps,rfd_0_150_Nps,rfd_0_200_Nps,peak_rfd_Nps,rfd_20_80_Nps,' +
+                'force_at_50ms_N,force_at_100ms_N,force_at_150ms_N,impulse_0_100ms_Ns,impulse_0_200ms_Ns,fs_Hz,filter,side'];
+            kept.forEach((r) => lines.push([r.no, r1(r.peakN), r1(r.t80Ms), r1(r.ttpMs),
+                r1(r.rfd[50]), r1(r.rfd[100]), r1(r.rfd[150]), r1(r.rfd[200]), r1(r.peakRfd), r1(r.rfd2080),
+                r1(r.forceAtMs[50]), r1(r.forceAtMs[100]), r1(r.forceAtMs[150]),
+                r3(r.impulse[100]), r3(r.impulse[200]), r1(r.fs),
+                `Butterworth 2nd-order zero-lag ${FILTER_CUTOFF_HZ}Hz`, r.side || ''].join(',')));
+            const name = `rfd-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+            const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+            const download = () => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = name;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(a.href), 4000);   // Safari ต้องให้ URL อยู่จนเริ่มดาวน์โหลด
+            };
+            // iPad/มือถือ: เปิดหน้าแชร์ (บันทึกลงไฟล์, AirDrop, อีเมล) ถ้ารองรับ
+            const file = typeof File === 'function' ? new File([blob], name, { type: 'text/csv' }) : null;
+            if (file && matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({ files: [file], title: name })
+                    .catch((err) => { if (err.name !== 'AbortError') download(); });
+                return;
+            }
+            download();
+        });
+
+        // ---- วาดกราฟ ----
+        const C = { grid: '#232930', axis: '#3a424c', text: '#8b939e', trace: '#e9edf2', peak: '#ff6a1a', onset: '#2bd47d' };
+        const CHART_FONT = "500 13px 'Barlow Condensed', sans-serif";
+
+        function niceStep(range) {
+            const rough = range / 4;
+            const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+            const m = rough / pow;
+            return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * pow;
+        }
+
+        function fitCanvas(cv, c) {
+            const dpr = window.devicePixelRatio || 1;
+            const w = cv.clientWidth, h = cv.clientHeight;
+            if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+                cv.width = Math.round(w * dpr);
+                cv.height = Math.round(h * dpr);
+            }
+            c.setTransform(dpr, 0, 0, dpr, 0, 0);
+            c.clearRect(0, 0, w, h);
+            return [w, h];
+        }
+
+        function draw() {
+            const [w, h] = fitCanvas(canvas, ctx);
+            const padL = 48, padR = 14, padT = 14, padB = 28;
+            const plotW = w - padL - padR;
+            const plotH = h - padT - padB;
+            const now = performance.now();
+            const tMin = now - WINDOW_MS;
+
+            const visible = samples.filter((s) => s.t >= tMin);
+            let vMax = toDisplay(peakN);
+            let vMin = 0;
+            for (const s of visible) {
+                const v = toDisplay(s.n);
+                if (v > vMax) vMax = v;
+                if (v < vMin) vMin = v;
+            }
+            const step = niceStep(Math.max((vMax - vMin) * 1.15, GRAPH_MIN_RANGE[displayUnit]));
+            const yMax = Math.ceil(vMax * 1.15 / step) * step || step;
+            const yMin = Math.floor(vMin / step) * step;
+
+            const xOf = (t) => padL + ((t - tMin) / WINDOW_MS) * plotW;
+            const yOf = (v) => padT + (1 - (v - yMin) / (yMax - yMin)) * plotH;
+
+            // เส้นตารางและตัวเลขแกน Y
+            ctx.font = CHART_FONT;
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let v = yMin; v <= yMax + step / 2; v += step) {
+                const y = yOf(v);
+                ctx.strokeStyle = Math.abs(v) < step / 2 ? C.axis : C.grid;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(padL, y);
+                ctx.lineTo(w - padR, y);
+                ctx.stroke();
+                ctx.fillStyle = C.text;
+                ctx.fillText(+v.toFixed(2) + '', padL - 8, y);
+            }
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(displayUnit, 6, padT - 4);
+
+            // ตัวเลขแกนเวลา
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            for (let s = 10; s >= 0; s -= 2) {
+                ctx.fillText(s === 0 ? '0s' : `-${s}s`, xOf(now - s * 1000), h - padB + 8);
+            }
+
+            // เส้น Peak
+            if (peakN > 0) {
+                const y = yOf(toDisplay(peakN));
+                ctx.strokeStyle = C.peak;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([6, 5]);
+                ctx.beginPath();
+                ctx.moveTo(padL, y);
+                ctx.lineTo(w - padR, y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // จุด onset (เส้นเขียว) ของการทดสอบล่าสุด
+            const last = trials[trials.length - 1];
+            if (last && last.onsetT >= tMin) {
+                const x = xOf(last.onsetT);
+                ctx.strokeStyle = C.onset;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(x, padT);
+                ctx.lineTo(x, padT + plotH);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // เส้นแรง
+            if (visible.length > 1) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(padL, padT, plotW, plotH);
+                ctx.clip();
+                ctx.strokeStyle = C.trace;
+                ctx.lineWidth = 2.5;
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                visible.forEach((s, i) => {
+                    const x = xOf(s.t), y = yOf(toDisplay(s.n));
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // จุด peak ของการทดสอบล่าสุด
+            if (last && last.onsetT >= tMin) {
+                ctx.fillStyle = C.peak;
+                ctx.beginPath();
+                ctx.arc(xOf(last.peakT), yOf(toDisplay(last.peakAbsN)), 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            requestAnimationFrame(draw);
+        }
+        requestAnimationFrame(draw);
+
+        // กราฟของครั้งที่เลือก (แกน Y เป็น N, แกน X เป็น ms นับจาก onset)
+        function drawTrial() {
+            const [w, h] = fitCanvas(trialCanvas, tctx);
+            const r = selected;
+            if (!r || !r.curve || r.curve.length < 2) return;
+
+            const padL = 52, padR = 14, padT = 14, padB = 28;
+            const plotW = w - padL - padR, plotH = h - padT - padB;
+            const lastMs = r.curve[r.curve.length - 1].ms;
+            const x0 = trialRange === '300' ? -40 : -Math.min(TRIAL_PRE_MS, -r.curve[0].ms);
+            const x1 = trialRange === '300' ? 300 : Math.max(lastMs, 300);
+            const pts = r.curve.filter((p) => p.ms >= x0 && p.ms <= x1);
+            let vMax = r.peakAbsN, vMin = 0;
+            for (const p of pts) { if (p.n > vMax) vMax = p.n; if (p.n < vMin) vMin = p.n; }
+            const step = niceStep(Math.max(vMax - vMin, 20) * 1.1);
+            const yMax = Math.ceil(vMax * 1.08 / step) * step || step;
+            const yMin = Math.floor(vMin / step) * step;
+            const xOf = (ms) => padL + (ms - x0) / (x1 - x0) * plotW;
+            const yOf = (n) => padT + (1 - (n - yMin) / (yMax - yMin)) * plotH;
+            const c = tctx;
+
+            c.font = CHART_FONT;
+            c.textAlign = 'right';
+            c.textBaseline = 'middle';
+            for (let v = yMin; v <= yMax + step / 2; v += step) {
+                c.strokeStyle = Math.abs(v) < step / 2 ? C.axis : C.grid;
+                c.lineWidth = 1;
+                c.beginPath(); c.moveTo(padL, yOf(v)); c.lineTo(w - padR, yOf(v)); c.stroke();
+                c.fillStyle = C.text;
+                c.fillText(+v.toFixed(1) + ' N', padL - 8, yOf(v));
+            }
+            c.textAlign = 'center';
+            c.textBaseline = 'top';
+            const xStep = trialRange === '300' ? 50 : niceStep(x1 - x0);
+            const inSec = x1 - x0 > 1500;
+            for (let ms = Math.ceil(x0 / xStep) * xStep; ms <= x1; ms += xStep) {
+                c.fillText(inSec ? +(ms / 1000).toFixed(1) + 's' : Math.round(ms) + '', xOf(ms), h - padB + 8);
+            }
+            if (!inSec) {
+                c.textAlign = 'right';
+                c.fillText('ms', w - padR, h - padB - 16);
+            }
+
+            // แถบช่วง RFD 0–50/100/150/200 ms ใต้เส้นแรง
+            c.save();
+            c.beginPath(); c.rect(padL, padT, plotW, plotH); c.clip();
+            const base = yOf(r.peakAbsN - r.peakN);
+            [[200, .07], [150, .11], [100, .16], [50, .22]].forEach(([ms, a]) => {
+                const seg = r.curve.filter((p) => p.ms >= 0 && p.ms <= ms);
+                if (seg.length < 2) return;
+                c.fillStyle = `rgba(233, 237, 242, ${a})`;
+                c.beginPath();
+                c.moveTo(xOf(0), base);
+                seg.forEach((p) => c.lineTo(xOf(p.ms), yOf(p.n)));
+                c.lineTo(xOf(seg[seg.length - 1].ms), base);
+                c.closePath();
+                c.fill();
+            });
+
+            // 80% ของ peak
+            if (r.t80Ms !== null) {
+                c.strokeStyle = C.text;
+                c.setLineDash([2, 4]);
+                c.lineWidth = 1;
+                c.beginPath(); c.moveTo(xOf(r.t80Ms), padT); c.lineTo(xOf(r.t80Ms), padT + plotH); c.stroke();
+                c.setLineDash([]);
+            }
+
+            // onset
+            c.strokeStyle = C.onset;
+            c.lineWidth = 1.5;
+            c.setLineDash([4, 4]);
+            c.beginPath(); c.moveTo(xOf(0), padT); c.lineTo(xOf(0), padT + plotH); c.stroke();
+            c.setLineDash([]);
+
+            // เส้นแรง
+            c.strokeStyle = C.trace;
+            c.lineWidth = 2.5;
+            c.lineJoin = 'round';
+            c.beginPath();
+            pts.forEach((p, i) => { if (i === 0) c.moveTo(xOf(p.ms), yOf(p.n)); else c.lineTo(xOf(p.ms), yOf(p.n)); });
+            c.stroke();
+
+            // peak
+            const pMs = r.peakT - r.onsetT;
+            if (pMs >= x0 && pMs <= x1) {
+                c.fillStyle = C.peak;
+                c.beginPath(); c.arc(xOf(pMs), yOf(r.peakAbsN), 5, 0, Math.PI * 2); c.fill();
+            }
+            c.restore();
+
+            // ป้ายกำกับ
+            c.font = "600 13px 'Barlow Condensed', sans-serif";
+            c.textBaseline = 'top';
+            c.textAlign = 'left';
+            c.fillStyle = C.onset;
+            c.fillText('onset', xOf(0) + 5, padT + 2);
+            if (r.t80Ms !== null && r.t80Ms <= x1) {
+                c.fillStyle = C.text;
+                c.fillText(`80% · ${Math.round(r.t80Ms)} ms`, xOf(r.t80Ms) + 5, padT + 18);
+            }
+        }
+
+        window.addEventListener('resize', drawTrial);
+        if (document.fonts) document.fonts.ready.then(drawTrial);
+        renderTable();
+    </script>
+</body>
+</html>

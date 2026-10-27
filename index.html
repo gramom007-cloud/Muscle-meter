@@ -666,7 +666,8 @@
         const canvas = document.getElementById('chart');
         const ctx = canvas.getContext('2d');
 
-        const SERVICE_UUID = 0xffe0;
+        // ใช้ UUID แบบเต็ม (ตัวเดียวกับ 0xFFE0) เพราะเบราว์เซอร์บน iOS อย่าง Bluefy บางรุ่นไม่รับ UUID แบบตัวเลข
+        const SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb";
         const CHARACTERISTIC_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb";
 
         // ---- หน่วย: เก็บค่าภายในเป็น Newton ทั้งหมด แสดงผลตามหน่วยใน RAW (kg/lb) พร้อมค่า N ----
@@ -781,7 +782,14 @@
 
                 const device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: [SERVICE_UUID, 0xffe1]
+                    optionalServices: [SERVICE_UUID]
+                });
+                device.addEventListener('gattserverdisconnected', () => {
+                    statusElem.textContent = "การเชื่อมต่อหลุด กด Connect อีกครั้ง";
+                    connectBtn.textContent = "Connect Bluetooth";
+                    connectBtn.classList.remove('on');
+                    connectBtn.disabled = false;
+                    if (wakeLock) wakeLock.release().catch(() => {});
                 });
 
                 statusElem.textContent = "กำลังเชื่อมต่อกับ " + (device.name || "Bluetooth Device") + "...";
@@ -804,7 +812,7 @@
 
             } catch (error) {
                 console.error(error);
-                statusElem.textContent = "เกิดข้อผิดพลาด: " + error.message;
+                statusElem.textContent = "เกิดข้อผิดพลาด: " + (error.name ? error.name + " – " : "") + error.message;
             }
         });
 

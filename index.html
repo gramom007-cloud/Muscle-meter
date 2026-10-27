@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111418">
     <title>Muscle Meter Live</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,10 +32,14 @@
             color: var(--ink);
             font: 15px/1.55 var(--text);
         }
-        button { font: inherit; color: inherit; cursor: pointer; }
+        button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+        .force-display, .newton, .peak-display { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
         button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px solid var(--peak); outline-offset: 2px; }
         .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
-        .app { max-width: 1400px; margin: 0 auto; padding: 16px 28px 40px; }
+        .app {
+            max-width: 1400px; margin: 0 auto;
+            padding: max(16px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
+        }
 
         /* ---- หัว ---- */
         header { display: flex; align-items: center; gap: 14px; min-height: 44px; }
@@ -88,7 +92,7 @@
         .actions button:active { transform: scale(.97); }
         .btn-tare { background: var(--ink); color: var(--bg); }
         .btn-reset { background: var(--panel); color: var(--peak); box-shadow: inset 0 0 0 1px var(--peak); }
-        .actions button:hover { filter: brightness(1.08); }
+        @media (hover: hover) { .actions button:hover { filter: brightness(1.08); } }
 
         /* ---- กราฟสด ---- */
         .chart-box { position: relative; height: 280px; margin-top: 22px; background: var(--panel); border-radius: 8px; }
@@ -145,7 +149,7 @@
         th { font-family: var(--text); font-size: 13px; font-weight: 500; color: var(--mute); }
         th:first-child, td:first-child { text-align: left; }
         tbody tr { cursor: pointer; transition: background-color .15s; }
-        tbody tr:hover { background: var(--panel-2); }
+        @media (hover: hover) { tbody tr:hover { background: var(--panel-2); } }
         tbody tr.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--peak); }
         tbody tr.off td { color: var(--faint); text-decoration: line-through; }
         tbody tr.new { animation: rowIn .6s ease-out; }
@@ -153,7 +157,7 @@
         .empty-row td { text-align: center; color: var(--mute); font-family: var(--text); font-size: 14px; cursor: default; }
         .row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
         .btn-light { border: 0; border-radius: 6px; padding: 11px 18px; background: var(--panel-2); font-weight: 500; }
-        .btn-light:hover { background: var(--line); }
+        @media (hover: hover) { .btn-light:hover { background: var(--line); } }
         .btn-danger { color: #ff8a8a; }
 
         /* ---- คู่มือ ---- */
@@ -190,7 +194,7 @@
         .seg button:disabled { cursor: default; }
         .side-pick .seg button { padding: 7px 16px; font-size: 15px; }
         .btn-plan { height: 52px; border-radius: 6px; border: 0; background: var(--panel-2); font-weight: 600; font-size: 16px; box-shadow: inset 0 0 0 1px var(--line); }
-        .btn-plan:hover { background: var(--line); }
+        @media (hover: hover) { .btn-plan:hover { background: var(--line); } }
         .chip { display: inline-block; font-family: var(--text); font-size: 13px; font-weight: 600; padding: 1px 8px; border-radius: 4px; color: #0b0d10; vertical-align: 3px; }
         .chip.L { background: var(--left); }
         .chip.R { background: var(--right); }
@@ -266,8 +270,41 @@
         .lsi-scale span { position: absolute; transform: translateX(-50%); }
         .lsi-note { color: var(--mute); font-size: 13px; margin-top: 10px; }
 
+        /* ---- จอกว้าง / iPad แนวนอน: กราฟอยู่ใต้ตัวเลข แผง Peak อยู่ขวา ให้หน้าวัดพอดีจอเดียว ---- */
+        @media (min-width: 1000px) {
+            .stage { display: grid; grid-template-columns: 1fr 360px; grid-template-rows: auto 1fr; column-gap: 28px; margin-top: 18px; }
+            .stage .hero { display: contents; }
+            .live { grid-column: 1; grid-row: 1; min-width: 0; }
+            .side { grid-column: 2; grid-row: 1 / span 2; }
+            .chart-box { grid-column: 1; grid-row: 2; margin-top: 18px; height: clamp(240px, calc(100vh - 400px), 460px); height: clamp(240px, calc(100dvh - 400px), 460px); }
+        }
+        /* ---- iPad แนวตั้ง: ตัวเลขเต็มกว้าง แผงควบคุมแบ่ง 2 คอลัมน์ ---- */
+        @media (min-width: 761px) and (max-width: 999px) {
+            .hero { grid-template-columns: 1fr; gap: 18px; }
+            #forceValue { font-size: clamp(150px, 24vw, 230px); }
+            .side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+            .mode-badge { grid-column: 1; grid-row: 1; }
+            .peak-display { grid-column: 1; grid-row: 2 / span 3; }
+            .actions { grid-column: 2; grid-row: 2; }
+            .side-pick { grid-column: 2; grid-row: 3; }
+            .btn-plan { grid-column: 2; grid-row: 4; }
+            .chart-box { height: 320px; }
+            .groups { grid-template-columns: 1fr 1fr; }
+        }
+        /* ---- จอสัมผัส: เป้ากดอย่างน้อย ~44 px ---- */
+        @media (pointer: coarse) {
+            .connect { min-height: 44px; }
+            .icon-btn { width: 48px; height: 48px; font-size: 24px; }
+            .seg button, .side-pick .seg button, .lsi-opt .seg button { min-height: 40px; padding: 8px 14px; font-size: 15px; }
+            .btn-exclude { min-height: 44px; padding: 10px 8px; }
+            .btn-light, .btn-primary { min-height: 44px; }
+            th, td { padding-top: 12px; padding-bottom: 12px; }
+            .field select { font-size: 16px; min-height: 40px; }
+            .field input[type=checkbox] { width: 26px; height: 26px; }
+            .guide summary { padding: 16px 2px; }
+        }
         @media (max-width: 760px) {
-            .app { padding: 12px 16px 32px; }
+            .app { padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
             .run { grid-template-columns: auto 1fr auto; gap: 12px; padding: 14px; }
             .run-side { font-size: 30px; padding: 4px 14px; }
             .run-side.none { font-size: 22px; }
@@ -338,8 +375,9 @@
         </div>
     </section>
 
+    <div class="stage">
     <section class="hero">
-        <div>
+        <div class="live">
             <div id="detector" class="detector">รอข้อมูลจากเครื่อง</div>
             <div class="force-display num">
                 <span id="forceValue">0.0</span><span id="unitLabel" class="unit">kg</span>
@@ -370,6 +408,7 @@
     </section>
 
     <div class="chart-box"><canvas id="chart" aria-label="กราฟแรงย้อนหลัง 10 วินาที"></canvas></div>
+    </div>
 
     <section class="results">
         <div class="sec-head">
@@ -713,7 +752,30 @@
             lastTime = now;
         }, 1000);
 
+        // Safari/Chrome บน iPad และ iPhone ไม่มี Web Bluetooth ต้องเปิดผ่านแอป Bluefy
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS ที่แสดงตัวเป็น Mac
+        const noBluetoothMsg = isIOS
+            ? 'เบราว์เซอร์นี้ไม่รองรับ Bluetooth บน iPad/iPhone ให้เปิดลิงก์นี้ในแอป Bluefy'
+            : 'เบราว์เซอร์นี้ไม่รองรับ Web Bluetooth ใช้ Chrome หรือ Edge';
+        if (!navigator.bluetooth) statusElem.textContent = noBluetoothMsg;
+
+        // กันจอดับระหว่างทดสอบ (จอดับแล้ว Bluetooth มักหลุด)
+        let wakeLock = null;
+        async function keepAwake() {
+            if (!('wakeLock' in navigator) || document.visibilityState !== 'visible' || (wakeLock && !wakeLock.released)) return;
+            try { wakeLock = await navigator.wakeLock.request('screen'); }
+            catch (e) { console.warn('Wake Lock:', e.message); }
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (connectBtn.classList.contains('on')) keepAwake();
+        });
+
         connectBtn.addEventListener('click', async () => {
+            if (!navigator.bluetooth) {
+                statusElem.textContent = noBluetoothMsg;
+                return;
+            }
             try {
                 statusElem.textContent = "กำลังเปิดหน้าต่างเลือกอุปกรณ์...";
 
@@ -733,6 +795,7 @@
                 connectBtn.textContent = "Connected";
                 connectBtn.classList.add('on');
                 connectBtn.disabled = true;
+                keepAwake();
 
                 await characteristic.startNotifications();
                 characteristic.addEventListener('characteristicvaluechanged', (event) => {
@@ -1462,12 +1525,25 @@
                 r1(r.forceAtMs[50]), r1(r.forceAtMs[100]), r1(r.forceAtMs[150]),
                 r3(r.impulse[100]), r3(r.impulse[200]), r1(r.fs),
                 `Butterworth 2nd-order zero-lag ${FILTER_CUTOFF_HZ}Hz`, r.side || ''].join(',')));
+            const name = `rfd-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
             const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `rfd-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
-            a.click();
-            URL.revokeObjectURL(a.href);
+            const download = () => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = name;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(a.href), 4000);   // Safari ต้องให้ URL อยู่จนเริ่มดาวน์โหลด
+            };
+            // iPad/มือถือ: เปิดหน้าแชร์ (บันทึกลงไฟล์, AirDrop, อีเมล) ถ้ารองรับ
+            const file = typeof File === 'function' ? new File([blob], name, { type: 'text/csv' }) : null;
+            if (file && matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({ files: [file], title: name })
+                    .catch((err) => { if (err.name !== 'AbortError') download(); });
+                return;
+            }
+            download();
         });
 
         // ---- วาดกราฟ ----

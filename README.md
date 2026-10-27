@@ -26,7 +26,10 @@ Web Bluetooth ใช้ได้เฉพาะ **Chrome / Edge** (Windows, macO
 
 - **บนคอม:** เปิด `index.html` ใน Chrome หรือ Edge แล้วกด Connect Bluetooth
 - **บนมือถือ Android:** เปิดผ่านลิงก์ GitHub Pages (HTTPS)
-- **iPhone:** Safari ไม่รองรับ Web Bluetooth ต้องใช้เบราว์เซอร์ Bluefy
+- **iPad / iPhone:** Safari และ Chrome บน iOS ไม่รองรับ Web Bluetooth ให้ติดตั้งแอป **Bluefy** (Web BLE Browser) จาก App Store แล้วเปิดลิงก์ GitHub Pages ในแอปนั้น
+  - หน้าจอรองรับ iPad ทั้งแนวนอน (ตัวเลข กราฟ และแผง Peak อยู่ในจอเดียว) และแนวตั้ง
+  - ระหว่างเชื่อมต่อ แอปจะพยายามกันจอดับ (Wake Lock) ถ้าเบราว์เซอร์ไม่รองรับ ให้ปิดการล็อกจออัตโนมัติในการตั้งค่า iPad เอง
+  - Export CSV บน iPad จะเปิดหน้าแชร์ เพื่อบันทึกลงแอปไฟล์ ส่ง AirDrop หรือแนบอีเมล
 
 ### เปิดใช้ GitHub Pages
 
